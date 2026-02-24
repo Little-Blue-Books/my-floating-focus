@@ -279,30 +279,34 @@
         const { motion, AnimatePresence } = FramerMotionLib;
 
         // --- Audio Logic (Soap Bubble Pop via Web Audio API) ---
+        let audioCtx = null;
+        const initAudio = () => {
+            if (!audioCtx) {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                audioCtx = new AudioContext();
+            }
+            if (audioCtx.state === "suspended") {
+                audioCtx.resume();
+            }
+        };
+        document.addEventListener("click", initAudio, { once: true });
+        document.addEventListener("touchstart", initAudio, { once: true });
+
         const playPopSound = () => {
             try {
-                const AudioContext = window.AudioContext || window.webkitAudioContext;
-                const context = new AudioContext();
-
-                // High-pitched pop sound
+                initAudio();
+                const context = audioCtx;
+                if (!context) return;
                 const osc = context.createOscillator();
                 const gain = context.createGain();
-
-                osc.type = 'sine';
+                osc.type = "sine";
                 osc.frequency.setValueAtTime(800, context.currentTime);
                 osc.frequency.exponentialRampToValueAtTime(120, context.currentTime + 0.1);
-
                 gain.gain.setValueAtTime(0.3, context.currentTime);
                 gain.gain.exponentialRampToValueAtTime(0.01, context.currentTime + 0.1);
-
-                osc.connect(gain);
-                gain.connect(context.destination);
-
-                osc.start();
-                osc.stop(context.currentTime + 0.12);
-            } catch (e) {
-                console.warn("Audio feedback not supported", e);
-            }
+                osc.connect(gain); gain.connect(context.destination);
+                osc.start(); osc.stop(context.currentTime + 0.12);
+            } catch (e) { console.warn("Audio feedback not supported", e); }
         };
 
         const NOTE_SIZE = 130;

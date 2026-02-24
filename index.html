@@ -422,8 +422,8 @@
                         FramerMotionLib.animate(scale, 1.1, { duration: 0.15 });
                     }}
                     onDragEnd={handleRelease}
-                    initial={{ opacity: 0, scale: 0.5 }}
-                    animate={{ opacity: 1 }}
+                    initial={{ opacity: 0, scale: 1 }}
+                    animate={{ opacity: 1, scale: 1 }}
                     exit={{ scale: 1.4, opacity: 0, filter: 'blur(5px)', transition: { duration: 0.2 } }}
                     style={{
                         position: 'absolute',

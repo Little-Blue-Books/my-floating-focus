@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Floating Focus | Seamless Canvas</title>
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Floating Focus">
+    <meta name="theme-color" content="#ffffff">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Kiwi+Maru:wght@400;500&family=Inter:wght@400;600;700&display=swap"
+        rel="stylesheet">
+
+    <!-- CDN Links for Standalone Execution -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://unpkg.com/framer-motion@10.16.4/dist/framer-motion.js"></script>
+
+    <style>
+        :root {
+            --canvas-bg: #ffffff;
+            --text-primary: #2d3436;
+            --shadow-multi:
+                0 4px 6px rgba(0, 0, 0, 0.02),
+                0 10px 25px rgba(0, 0, 0, 0.08);
+        }
+
+        html,
+        body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden !important;
+            background-color: var(--canvas-bg);
+            font-family: 'Kiwi Maru', sans-serif;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        #root {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+        }
+
+        .header {
+            position: fixed;
+            top: 1.25rem;
+            left: 1.25rem;
+            z-index: 1000;
+            pointer-events: none;
+        }
+
+        .title {
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: var(--text-primary);
+            opacity: 0.4;
+            letter-spacing: 1px;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .input-container {
+            position: fixed;
+            top: 1.25rem;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+            width: 100%;
+            max-width: 440px;
+            padding: 0 1rem;
+        }
+
+        .input-wrapper {
+            background: white;
+            display: flex;
+            gap: 0.5rem;
+            padding: 0.4rem;
+            border-radius: 12px;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.04);
+            border: 1px solid rgba(0, 0, 0, 0.03);
+        }
+
+        input {
+            flex: 1;
+            border: none;
+            padding: 0.6rem 1rem;
+            font-size: 0.95rem;
+            outline: none;
+            background: transparent;
+            color: var(--text-primary);
+            font-family: 'Kiwi Maru', sans-serif;
+        }
+
+        .add-btn {
+            background: #2d3436;
+            color: white;
+            border: none;
+            padding: 0 1.25rem;
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .sticky-note {
+            position: relative;
+            width: 260px;
+            height: 260px;
+            padding: 2.25rem;
+            box-shadow: var(--shadow-multi);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            cursor: grab;
+            border-radius: 2px;
+            background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.1) 0%, rgba(0, 0, 0, 0.02) 100%);
+            transition: box-shadow 0.2s;
+        }
+
+        @media (max-width: 600px) {
+            .sticky-note {
+                width: 200px;
+                height: 200px;
+                padding: 1.5rem;
+            }
+
+            .note-text {
+                font-size: 1.1rem;
+            }
+
+            .input-container {
+                width: 90%;
+                max-width: none;
+            }
+
+            .input-wrapper {
+                border-radius: 10px;
+                padding: 0.2rem;
+            }
+
+            input {
+                padding: 0.5rem 0.75rem;
+                font-size: 0.9rem;
+            }
+
+            .add-btn {
+                padding: 0 0.75rem;
+                font-size: 0.85rem;
+            }
+
+            .folded-corner {
+                border-width: 0 28px 28px 0;
+            }
+
+            .sticky-note::before {
+                width: 28px;
+                height: 28px;
+            }
+        }
+
+        .folded-corner {
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 0;
+            height: 0;
+            border-style: solid;
+            border-width: 0 40px 40px 0;
+            border-color: transparent white transparent transparent;
+            filter: drop-shadow(-2px 2px 2px rgba(0, 0, 0, 0.1));
+            z-index: 2;
+        }
+
+        .sticky-note::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 40px;
+            height: 40px;
+            background: white;
+            z-index: 1;
+        }
+
+        .note-text {
+            font-size: 1.3rem;
+            font-weight: 500;
+            line-height: 1.5;
+            color: var(--text-primary);
+            word-wrap: break-word;
+            max-width: 100%;
+        }
+
+        .delete-x {
+            position: absolute;
+            bottom: -10px;
+            right: -10px;
+            background: none;
+            border: none;
+            color: rgba(0, 0, 0, 0.15);
+            cursor: pointer;
+            font-size: 2rem;
+            padding: 24px;
+            /* Massive hit area */
+            opacity: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: opacity 0.2s, color 0.2s, transform 0.2s;
+            z-index: 5;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .delete-x.visible {
+            opacity: 1;
+            color: rgba(0, 0, 0, 0.5);
+        }
+
+        .sticky-note:hover .delete-x {
+            opacity: 1;
+        }
+
+        .delete-x:hover {
+            color: #ff7675;
+            transform: scale(1.2);
+        }
+
+        .view-toggle {
+            position: fixed;
+            bottom: 1.5rem;
+            right: 1.5rem;
+            z-index: 1000;
+        }
+
+        .toggle-pill {
+            background: white;
+            border: 1px solid rgba(0, 0, 0, 0.05);
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            color: var(--text-primary);
+            opacity: 0.5;
+            cursor: pointer;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .list-container {
+            padding: 8rem 2rem 2rem;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: 2rem;
+            height: 100vh;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const FramerMotionLib = window.FramerMotion || window.Motion;
+        const { useState, useEffect, useMemo, useRef } = React;
+        const { motion, AnimatePresence } = FramerMotionLib;
+
+        // --- Audio Logic (Soap Bubble Pop via Web Audio API) ---
+        const playPopSound = () => {
+            try {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                const context = new AudioContext();
+
+                // High-pitched pop sound
+                const osc = context.createOscillator();
+                const gain = context.createGain();
+
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(800, context.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(120, context.currentTime + 0.1);
+
+                gain.gain.setValueAtTime(0.3, context.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, context.currentTime + 0.1);
+
+                osc.connect(gain);
+                gain.connect(context.destination);
+
+                osc.start();
+                osc.stop(context.currentTime + 0.12);
+            } catch (e) {
+                console.warn("Audio feedback not supported", e);
+            }
+        };
+
+        const NOTE_SIZE = 260;
+        const MOBILE_NOTE_SIZE = 200;
+
+        const SoapBubbleNote = ({ task, onDelete, windowSize }) => {
+            const [status, setStatus] = useState('floating'); // 'floating', 'active', 'paused'
+            const statusRef = useRef('floating');
+
+            // Motion Values for independent control (fixes blinking/resetting)
+            const x = FramerMotionLib.useMotionValue(0);
+            const y = FramerMotionLib.useMotionValue(0);
+            const scale = FramerMotionLib.useMotionValue(1);
+            const rotate = FramerMotionLib.useMotionValue(0);
+
+            const driftRef = useRef(null);
+
+            const colors = ['#fff9c4', '#fce4ec', '#e3f2fd', '#f1f8e9'];
+            const bgColor = useMemo(() => colors[Math.floor(Math.random() * colors.length)], []);
+
+            const generatePath = () => {
+                const maxX = windowSize.width - NOTE_SIZE;
+                const maxY = windowSize.height - NOTE_SIZE;
+                return {
+                    x: [Math.random() * maxX, Math.random() * maxX, Math.random() * maxX, Math.random() * maxX],
+                    y: [Math.random() * maxY, Math.random() * maxY, Math.random() * maxY, Math.random() * maxY]
+                };
+            };
+
+            const path = useMemo(generatePath, [windowSize]);
+            const driftDuration = useMemo(() => 15 + Math.random() * 10, []);
+
+            const isMobile = windowSize.width < 600;
+            const currentNoteSize = isMobile ? MOBILE_NOTE_SIZE : NOTE_SIZE;
+
+            // Initialize x/y only once
+            useEffect(() => {
+                x.set(path.x[0]);
+                y.set(path.y[0]);
+            }, []);
+
+            // Control Floating Logic
+            const startFloating = () => {
+                if (driftRef.current) driftRef.current.stop();
+
+                const controlsX = FramerMotionLib.animate(x, path.x, {
+                    duration: driftDuration, repeat: Infinity, repeatType: "mirror", ease: "easeInOut"
+                });
+                const controlsY = FramerMotionLib.animate(y, path.y, {
+                    duration: driftDuration * 1.3, repeat: Infinity, repeatType: "mirror", ease: "easeInOut"
+                });
+                const controlsR = FramerMotionLib.animate(rotate, [-1, 1, -1], {
+                    duration: 5, repeat: Infinity, ease: "easeInOut"
+                });
+
+                driftRef.current = {
+                    stop: () => {
+                        controlsX.stop();
+                        controlsY.stop();
+                        controlsR.stop();
+                    }
+                };
+            };
+
+            useEffect(() => {
+                if (status === 'floating') {
+                    startFloating();
+                } else {
+                    if (driftRef.current) driftRef.current.stop();
+                }
+                return () => { if (driftRef.current) driftRef.current.stop(); };
+            }, [status, windowSize]);
+
+            const handleDown = (e) => {
+                if (e.target.closest('.delete-x')) return;
+                statusRef.current = 'active';
+                setStatus('active');
+                FramerMotionLib.animate(scale, 0.85, { duration: 0.15 });
+            };
+
+            const handleRelease = async () => {
+                if (statusRef.current !== 'active') return;
+                statusRef.current = 'paused';
+                setStatus('paused');
+
+                // Maintain small scale during pause
+                await FramerMotionLib.animate(scale, 0.85, { duration: 0.3 });
+
+                // Pulsing while paused (small scale)
+                if (statusRef.current === 'paused') {
+                    FramerMotionLib.animate(scale, [0.85, 0.87, 0.85], {
+                        duration: 2, repeat: Infinity, ease: "easeInOut"
+                    });
+                }
+
+                await new Promise(resolve => setTimeout(resolve, 4000));
+
+                if (statusRef.current !== 'paused') return;
+
+                statusRef.current = 'floating';
+                FramerMotionLib.animate(scale, 1, { duration: 0.3 });
+                setStatus('floating');
+            };
+
+            return (
+                <motion.div
+                    drag
+                    dragMomentum={false}
+                    dragConstraints={{
+                        left: 0,
+                        right: windowSize.width - currentNoteSize,
+                        top: 0,
+                        bottom: windowSize.height - currentNoteSize
+                    }}
+                    onPointerDown={handleDown}
+                    onPointerUp={handleRelease}
+                    onDragStart={() => {
+                        statusRef.current = 'active';
+                        setStatus('active');
+                        FramerMotionLib.animate(scale, 0.85, { duration: 0.15 });
+                    }}
+                    onDragEnd={handleRelease}
+                    initial={{ opacity: 0, scale: 0.5 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ scale: 1.4, opacity: 0, filter: 'blur(5px)', transition: { duration: 0.2 } }}
+                    style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        x, y, scale, rotate,
+                        zIndex: (status === 'active' || status === 'paused') ? 100 : 10,
+                        touchAction: 'none'
+                    }}
+                    whileHover={{ scale: status === 'floating' ? 1.05 : undefined }}
+                >
+                    <div className="sticky-note" style={{ backgroundColor: bgColor }}>
+                        <div className="folded-corner"></div>
+                        <div className="note-text">{task.text}</div>
+                        <button
+                            className={`delete-x ${status !== 'floating' ? 'visible' : ''}`}
+                            onPointerDown={(e) => { e.stopPropagation(); e.preventDefault(); }}
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                e.preventDefault();
+                                onDelete(task.id);
+                            }}
+                        >×</button>
+                    </div>
+                </motion.div>
+            );
+        };
+
+        const App = () => {
+            const [tasks, setTasks] = useState([]);
+            const [inputValue, setInputValue] = useState("");
+            const [viewMode, setViewMode] = useState("float");
+            const [windowSize, setWindowSize] = useState({ width: window.innerWidth, height: window.innerHeight });
+
+            useEffect(() => {
+                const handleResize = () => setWindowSize({ width: window.innerWidth, height: window.innerHeight });
+                window.addEventListener('resize', handleResize);
+                return () => window.removeEventListener('resize', handleResize);
+            }, []);
+
+            const addTask = () => {
+                if (!inputValue.trim()) return;
+                setTasks(prev => [...prev, { id: Date.now(), text: inputValue }]);
+                setInputValue("");
+            };
+
+            const deleteTask = (id) => {
+                playPopSound();
+                setTasks(prev => prev.filter(t => t.id !== id));
+            };
+
+            return (
+                <div id="canvas">
+                    <header className="header"><div className="title">FLOATING FOCUS</div></header>
+                    <div className="input-container">
+                        <div className="input-wrapper">
+                            <input
+                                type="text"
+                                placeholder="いま、頭にあることをそっと浮かべてみる？"
+                                value={inputValue}
+                                onChange={(e) => setInputValue(e.target.value)}
+                                onKeyPress={(e) => e.key === 'Enter' && addTask()}
+                            />
+                            <button className="add-btn" onClick={addTask}>Add</button>
+                        </div>
+                    </div>
+                    <div className="view-toggle">
+                        <button className="toggle-pill" onClick={() => setViewMode(viewMode === 'float' ? 'list' : 'float')}>
+                            {viewMode === 'float' ? 'Organize to List' : 'Let them Float'}
+                        </button>
+                    </div>
+                    {viewMode === 'float' ? (
+                        <div style={{ width: '100vw', height: '100vh', position: 'relative', overflow: 'hidden' }}>
+                            <AnimatePresence>
+                                {tasks.map(task => (
+                                    <SoapBubbleNote key={task.id} task={task} onDelete={deleteTask} windowSize={windowSize} />
+                                ))}
+                            </AnimatePresence>
+                        </div>
+                    ) : (
+                        <div className="list-container">
+                            <AnimatePresence>
+                                {tasks.map(task => (
+                                    <div key={task.id} className="sticky-note" style={{ backgroundColor: '#fff9c4' }}>
+                                        <div className="note-text">{task.text}</div>
+                                        <button className="delete-x visible" onClick={() => deleteTask(task.id)}>×</button>
+                                    </div>
+                                ))}
+                            </AnimatePresence>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+
+</html>

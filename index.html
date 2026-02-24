@@ -281,32 +281,53 @@
         // --- Audio Logic (Soap Bubble Pop via Web Audio API) ---
         let audioCtx = null;
         const initAudio = () => {
-            if (!audioCtx) {
-                const AudioContext = window.AudioContext || window.webkitAudioContext;
-                audioCtx = new AudioContext();
-            }
-            if (audioCtx.state === "suspended") {
-                audioCtx.resume();
-            }
+            try {
+                if (!audioCtx) {
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    audioCtx = new AudioContext();
+                }
+                if (audioCtx.state === "suspended") {
+                    audioCtx.resume();
+                }
+                // Play a tiny silent note to force unlock on iPad
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                gain.gain.value = 0.0001;
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start(0);
+                osc.stop(0.001);
+            } catch (e) { }
         };
-        document.addEventListener("click", initAudio, { once: true });
-        document.addEventListener("touchstart", initAudio, { once: true });
+        // More aggressive unlocking
+        window.addEventListener("mousedown", initAudio, { once: true });
+        window.addEventListener("touchstart", initAudio, { once: true });
+        window.addEventListener("click", initAudio, { once: true });
 
         const playPopSound = () => {
             try {
                 initAudio();
+                if (!audioCtx) return;
+
                 const context = audioCtx;
-                if (!context) return;
                 const osc = context.createOscillator();
                 const gain = context.createGain();
+
                 osc.type = "sine";
                 osc.frequency.setValueAtTime(800, context.currentTime);
                 osc.frequency.exponentialRampToValueAtTime(120, context.currentTime + 0.1);
+
                 gain.gain.setValueAtTime(0.3, context.currentTime);
                 gain.gain.exponentialRampToValueAtTime(0.01, context.currentTime + 0.1);
-                osc.connect(gain); gain.connect(context.destination);
-                osc.start(); osc.stop(context.currentTime + 0.12);
-            } catch (e) { console.warn("Audio feedback not supported", e); }
+
+                osc.connect(gain);
+                gain.connect(context.destination);
+
+                osc.start();
+                osc.stop(context.currentTime + 0.12);
+            } catch (e) {
+                console.warn("Audio feedback not supported", e);
+            }
         };
 
         const NOTE_SIZE = 130;
@@ -459,10 +480,11 @@
                         <div className="note-text">{task.text}</div>
                         <button
                             className={`delete-x ${status !== 'floating' ? 'visible' : ''}`}
-                            onPointerDown={(e) => { e.stopPropagation(); e.preventDefault(); }}
+                            onPointerDown={(e) => { e.stopPropagation(); }}
                             onClick={(e) => {
                                 e.stopPropagation();
                                 e.preventDefault();
+                                if (typeof initAudio === 'function') initAudio();
                                 onDelete(task.id);
                             }}
                         >×</button>

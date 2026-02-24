@@ -306,67 +306,72 @@
             const [status, setStatus] = useState('floating'); // 'floating', 'active', 'paused'
             const statusRef = useRef('floating');
 
-            // Motion Values for independent control (fixes blinking/resetting)
+            // Motion Values
             const x = FramerMotionLib.useMotionValue(0);
             const y = FramerMotionLib.useMotionValue(0);
             const scale = FramerMotionLib.useMotionValue(1);
             const rotate = FramerMotionLib.useMotionValue(0);
 
             const driftRef = useRef(null);
-
             const colors = ['#fff9c4', '#fce4ec', '#e3f2fd', '#f1f8e9'];
             const bgColor = useMemo(() => colors[Math.floor(Math.random() * colors.length)], []);
-
-            const generatePath = () => {
-                const maxX = windowSize.width - NOTE_SIZE;
-                const maxY = windowSize.height - NOTE_SIZE;
-                return {
-                    x: [Math.random() * maxX, Math.random() * maxX, Math.random() * maxX, Math.random() * maxX],
-                    y: [Math.random() * maxY, Math.random() * maxY, Math.random() * maxY, Math.random() * maxY]
-                };
-            };
-
-            const path = useMemo(generatePath, [windowSize]);
-            const driftDuration = useMemo(() => 15 + Math.random() * 10, []);
 
             const isMobile = windowSize.width < 600;
             const currentNoteSize = isMobile ? MOBILE_NOTE_SIZE : NOTE_SIZE;
 
-            // Initialize x/y only once
+            const path = useMemo(() => {
+                const maxX = windowSize.width - currentNoteSize;
+                const maxY = windowSize.height - currentNoteSize;
+                return {
+                    x: [Math.random() * maxX, Math.random() * maxX, Math.random() * maxX, Math.random() * maxX],
+                    y: [Math.random() * maxY, Math.random() * maxY, Math.random() * maxY, Math.random() * maxY]
+                };
+            }, [windowSize, currentNoteSize]);
+
+            const driftDuration = useMemo(() => 15 + Math.random() * 10, []);
+
+            // Bounce Effect (Powan) logic
+            useEffect(() => {
+                const maxX = windowSize.width - currentNoteSize;
+                const maxY = windowSize.height - currentNoteSize;
+                let lastBounce = 0;
+
+                const checkBounce = (val, max) => {
+                    if (statusRef.current !== 'floating') return;
+                    // Trigger "powan" effect when hitting edges
+                    if ((val <= 5 || val >= max - 5) && Date.now() - lastBounce > 800) {
+                        lastBounce = Date.now();
+                        FramerMotionLib.animate(scale, [1, 1.08, 1], { duration: 0.5, ease: "easeOut" });
+                    }
+                };
+
+                const unsubX = x.on("change", (v) => checkBounce(v, maxX));
+                const unsubY = y.on("change", (v) => checkBounce(v, maxY));
+                return () => { unsubX(); unsubY(); };
+            }, [windowSize, currentNoteSize]);
+
             useEffect(() => {
                 x.set(path.x[0]);
                 y.set(path.y[0]);
             }, []);
 
-            // Control Floating Logic
             const startFloating = () => {
                 if (driftRef.current) driftRef.current.stop();
-
-                const controlsX = FramerMotionLib.animate(x, path.x, {
+                const cx = FramerMotionLib.animate(x, path.x, {
                     duration: driftDuration, repeat: Infinity, repeatType: "mirror", ease: "easeInOut"
                 });
-                const controlsY = FramerMotionLib.animate(y, path.y, {
+                const cy = FramerMotionLib.animate(y, path.y, {
                     duration: driftDuration * 1.3, repeat: Infinity, repeatType: "mirror", ease: "easeInOut"
                 });
-                const controlsR = FramerMotionLib.animate(rotate, [-1, 1, -1], {
+                const cr = FramerMotionLib.animate(rotate, [-1, 1, -1], {
                     duration: 5, repeat: Infinity, ease: "easeInOut"
                 });
-
-                driftRef.current = {
-                    stop: () => {
-                        controlsX.stop();
-                        controlsY.stop();
-                        controlsR.stop();
-                    }
-                };
+                driftRef.current = { stop: () => { cx.stop(); cy.stop(); cr.stop(); } };
             };
 
             useEffect(() => {
-                if (status === 'floating') {
-                    startFloating();
-                } else {
-                    if (driftRef.current) driftRef.current.stop();
-                }
+                if (status === 'floating') startFloating();
+                else if (driftRef.current) driftRef.current.stop();
                 return () => { if (driftRef.current) driftRef.current.stop(); };
             }, [status, windowSize]);
 
@@ -374,7 +379,7 @@
                 if (e.target.closest('.delete-x')) return;
                 statusRef.current = 'active';
                 setStatus('active');
-                FramerMotionLib.animate(scale, 0.85, { duration: 0.15 });
+                FramerMotionLib.animate(scale, 1.1, { duration: 0.2 }); // Tap -> Larger (1.1)
             };
 
             const handleRelease = async () => {
@@ -382,22 +387,13 @@
                 statusRef.current = 'paused';
                 setStatus('paused');
 
-                // Maintain small scale during pause
-                await FramerMotionLib.animate(scale, 0.85, { duration: 0.3 });
-
-                // Pulsing while paused (small scale)
-                if (statusRef.current === 'paused') {
-                    FramerMotionLib.animate(scale, [0.85, 0.87, 0.85], {
-                        duration: 2, repeat: Infinity, ease: "easeInOut"
-                    });
-                }
-
-                await new Promise(resolve => setTimeout(resolve, 4000));
+                // Freeze exactly as is for 1.8 seconds (perfectly snappier feel)
+                await new Promise(resolve => setTimeout(resolve, 1800));
 
                 if (statusRef.current !== 'paused') return;
 
                 statusRef.current = 'floating';
-                FramerMotionLib.animate(scale, 1, { duration: 0.3 });
+                FramerMotionLib.animate(scale, 1, { duration: 0.4, ease: "easeOut" });
                 setStatus('floating');
             };
 
@@ -416,7 +412,7 @@
                     onDragStart={() => {
                         statusRef.current = 'active';
                         setStatus('active');
-                        FramerMotionLib.animate(scale, 0.85, { duration: 0.15 });
+                        FramerMotionLib.animate(scale, 1.1, { duration: 0.15 });
                     }}
                     onDragEnd={handleRelease}
                     initial={{ opacity: 0, scale: 0.5 }}

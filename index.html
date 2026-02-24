@@ -116,9 +116,9 @@
 
         .sticky-note {
             position: relative;
-            width: 260px;
-            height: 260px;
-            padding: 2.25rem;
+            width: 130px;
+            height: 130px;
+            padding: 1rem;
             box-shadow: var(--shadow-multi);
             display: flex;
             flex-direction: column;
@@ -134,13 +134,13 @@
 
         @media (max-width: 600px) {
             .sticky-note {
-                width: 200px;
-                height: 200px;
-                padding: 1.5rem;
+                width: 100px;
+                height: 100px;
+                padding: 0.6rem;
             }
 
             .note-text {
-                font-size: 1.1rem;
+                font-size: 0.75rem;
             }
 
             .input-container {
@@ -262,7 +262,7 @@
         .list-container {
             padding: 8rem 2rem 2rem;
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
             gap: 2rem;
             height: 100vh;
             overflow-y: auto;
@@ -305,8 +305,8 @@
             }
         };
 
-        const NOTE_SIZE = 260;
-        const MOBILE_NOTE_SIZE = 200;
+        const NOTE_SIZE = 130;
+        const MOBILE_NOTE_SIZE = 100;
 
         const SoapBubbleNote = ({ task, onDelete, windowSize }) => {
             const [status, setStatus] = useState('floating'); // 'floating', 'active', 'paused'
@@ -325,16 +325,11 @@
             const isMobile = windowSize.width < 600;
             const currentNoteSize = isMobile ? MOBILE_NOTE_SIZE : NOTE_SIZE;
 
-            const path = useMemo(() => {
-                const maxX = windowSize.width - currentNoteSize;
-                const maxY = windowSize.height - currentNoteSize;
-                return {
-                    x: [Math.random() * maxX, Math.random() * maxX, Math.random() * maxX, Math.random() * maxX],
-                    y: [Math.random() * maxY, Math.random() * maxY, Math.random() * maxY, Math.random() * maxY]
-                };
-            }, [windowSize, currentNoteSize]);
-
-            const driftDuration = useMemo(() => 15 + Math.random() * 10, []);
+            // Helper to get random coord
+            const getRandomPos = () => ({
+                x: Math.random() * (windowSize.width - currentNoteSize),
+                y: Math.random() * (windowSize.height - currentNoteSize)
+            });
 
             // Bounce Effect (Powan) logic
             useEffect(() => {
@@ -344,10 +339,9 @@
 
                 const checkBounce = (val, max) => {
                     if (statusRef.current !== 'floating') return;
-                    // Trigger "powan" effect when hitting edges
                     if ((val <= 5 || val >= max - 5) && Date.now() - lastBounce > 800) {
                         lastBounce = Date.now();
-                        FramerMotionLib.animate(scale, [1, 1.08, 1], { duration: 0.5, ease: "easeOut" });
+                        FramerMotionLib.animate(scale, [1, 1.1, 1], { duration: 0.5, ease: "easeOut" });
                     }
                 };
 
@@ -357,35 +351,53 @@
             }, [windowSize, currentNoteSize]);
 
             useEffect(() => {
-                x.set(path.x[0]);
-                y.set(path.y[0]);
-            }, []);
+                // Initialize with a random position immediately
+                const startPos = getRandomPos();
+                x.set(startPos.x);
+                y.set(startPos.y);
 
-            const startFloating = () => {
-                if (driftRef.current) driftRef.current.stop();
-                const cx = FramerMotionLib.animate(x, path.x, {
-                    duration: driftDuration, repeat: Infinity, repeatType: "mirror", ease: "easeInOut"
-                });
-                const cy = FramerMotionLib.animate(y, path.y, {
-                    duration: driftDuration * 1.3, repeat: Infinity, repeatType: "mirror", ease: "easeInOut"
-                });
-                const cr = FramerMotionLib.animate(rotate, [-1, 1, -1], {
-                    duration: 5, repeat: Infinity, ease: "easeInOut"
-                });
-                driftRef.current = { stop: () => { cx.stop(); cy.stop(); cr.stop(); } };
-            };
+                let currentMovement = null;
+                const animateToNext = () => {
+                    const isPaused = statusRef.current === 'paused';
+                    const isActive = statusRef.current === 'active';
 
-            useEffect(() => {
-                if (status === 'floating') startFloating();
-                else if (driftRef.current) driftRef.current.stop();
-                return () => { if (driftRef.current) driftRef.current.stop(); };
-            }, [status, windowSize]);
+                    if (isActive) return; // Dragging handles its own pos
+
+                    const target = getRandomPos();
+                    // If paused, move very very slowly in a tight area
+                    const duration = isPaused ? 40 : (12 + Math.random() * 10);
+
+                    const controlsX = FramerMotionLib.animate(x, target.x, {
+                        duration, ease: "easeInOut"
+                    });
+                    const controlsY = FramerMotionLib.animate(y, target.y, {
+                        duration: duration * (0.9 + Math.random() * 0.2), ease: "easeInOut"
+                    });
+
+                    currentMovement = { stop: () => { controlsX.stop(); controlsY.stop(); } };
+
+                    Promise.all([controlsX, controlsY]).then(() => {
+                        animateToNext();
+                    });
+                };
+
+                const rotation = FramerMotionLib.animate(rotate, [-3, 3, -3], {
+                    duration: 5 + Math.random() * 3, repeat: Infinity, ease: "easeInOut"
+                });
+
+                animateToNext();
+
+                return () => {
+                    if (currentMovement) currentMovement.stop();
+                    rotation.stop();
+                };
+            }, [windowSize]); // Restart when window size changes
 
             const handleDown = (e) => {
                 if (e.target.closest('.delete-x')) return;
                 statusRef.current = 'active';
                 setStatus('active');
-                FramerMotionLib.animate(scale, 1.1, { duration: 0.2 }); // Tap -> Larger (1.1)
+                FramerMotionLib.animate(scale, 1.4, { duration: 0.2, ease: "backOut" });
             };
 
             const handleRelease = async () => {
@@ -393,13 +405,13 @@
                 statusRef.current = 'paused';
                 setStatus('paused');
 
-                // Freeze exactly as is for 1.8 seconds (perfectly snappier feel)
+                // Wait while in slow hover mode
                 await new Promise(resolve => setTimeout(resolve, 1800));
 
                 if (statusRef.current !== 'paused') return;
 
                 statusRef.current = 'floating';
-                FramerMotionLib.animate(scale, 1, { duration: 0.4, ease: "easeOut" });
+                FramerMotionLib.animate(scale, 1, { duration: 0.5, ease: "easeOut" });
                 setStatus('floating');
             };
 
@@ -419,10 +431,10 @@
                     onDragStart={() => {
                         statusRef.current = 'active';
                         setStatus('active');
-                        FramerMotionLib.animate(scale, 1.1, { duration: 0.15 });
+                        FramerMotionLib.animate(scale, 1.4, { duration: 0.15, ease: "backOut" });
                     }}
                     onDragEnd={handleRelease}
-                    initial={{ opacity: 0, scale: 1 }}
+                    initial={{ opacity: 0, scale: 0.5 }}
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ scale: 1.4, opacity: 0, filter: 'blur(5px)', transition: { duration: 0.2 } }}
                     style={{

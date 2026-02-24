@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Floating Focus | Seamless Canvas</title>
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -37,15 +37,20 @@
             width: 100%;
             height: 100%;
             overflow: hidden !important;
+            position: fixed;
+            /* Lock viewport on iOS */
             background-color: var(--canvas-bg);
             font-family: 'Kiwi Maru', sans-serif;
             -webkit-overflow-scrolling: touch;
+            touch-action: none;
+            user-select: none;
         }
 
         #root {
             width: 100vw;
             height: 100vh;
             position: relative;
+            touch-action: none;
         }
 
         .header {
@@ -124,6 +129,7 @@
             border-radius: 2px;
             background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.1) 0%, rgba(0, 0, 0, 0.02) 100%);
             transition: box-shadow 0.2s;
+            touch-action: none;
         }
 
         @media (max-width: 600px) {
@@ -399,6 +405,7 @@
 
             return (
                 <motion.div
+                    layout
                     drag
                     dragMomentum={false}
                     dragConstraints={{
@@ -454,7 +461,29 @@
             useEffect(() => {
                 const handleResize = () => setWindowSize({ width: window.innerWidth, height: window.innerHeight });
                 window.addEventListener('resize', handleResize);
-                return () => window.removeEventListener('resize', handleResize);
+
+                // Prevent all default browser gestures (scroll, pinch, etc.)
+                const preventDefault = (e) => {
+                    // Allow interaction for input and buttons
+                    if (e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON' || e.target.closest('button')) {
+                        return;
+                    }
+                    if (e.touches && e.touches.length > 1) {
+                        e.preventDefault(); // Block pinch zoom
+                    }
+                    e.preventDefault();
+                };
+
+                document.addEventListener('touchmove', preventDefault, { passive: false });
+                document.addEventListener('wheel', preventDefault, { passive: false });
+                document.addEventListener('gesturestart', preventDefault, { passive: false });
+
+                return () => {
+                    window.removeEventListener('resize', handleResize);
+                    document.removeEventListener('touchmove', preventDefault);
+                    document.removeEventListener('wheel', preventDefault);
+                    document.removeEventListener('gesturestart', preventDefault);
+                };
             }, []);
 
             const addTask = () => {

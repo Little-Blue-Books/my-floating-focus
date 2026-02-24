@@ -325,11 +325,14 @@
             const isMobile = windowSize.width < 600;
             const currentNoteSize = isMobile ? MOBILE_NOTE_SIZE : NOTE_SIZE;
 
-            // Helper to get random coord
-            const getRandomPos = () => ({
-                x: Math.random() * (windowSize.width - currentNoteSize),
-                y: Math.random() * (windowSize.height - currentNoteSize)
-            });
+            // Helper to get random coord (Picks a spot in the opposite quadrant for flow)
+            const getRandomPos = (curX, curY) => {
+                const maxX = windowSize.width - currentNoteSize;
+                const maxY = windowSize.height - currentNoteSize;
+                const targetX = curX > maxX / 2 ? Math.random() * (maxX * 0.4) : (maxX * 0.6) + Math.random() * (maxX * 0.4);
+                const targetY = curY > maxY / 2 ? Math.random() * (maxY * 0.4) : (maxY * 0.6) + Math.random() * (maxY * 0.4);
+                return { x: targetX, y: targetY };
+            };
 
             // Bounce Effect (Powan) logic
             useEffect(() => {
@@ -350,22 +353,24 @@
                 return () => { unsubX(); unsubY(); };
             }, [windowSize, currentNoteSize]);
 
+            const isFirstMount = useRef(true);
             useEffect(() => {
-                // Initialize with a random position immediately
-                const startPos = getRandomPos();
-                x.set(startPos.x);
-                y.set(startPos.y);
+                if (isFirstMount.current) {
+                    const startPos = { x: Math.random() * (windowSize.width - currentNoteSize), y: Math.random() * (windowSize.height - currentNoteSize) };
+                    x.set(startPos.x);
+                    y.set(startPos.y);
+                    isFirstMount.current = false;
+                }
 
-                let currentMovement = null;
-                const animateToNext = () => {
-                    const isPaused = statusRef.current === 'paused';
-                    const isActive = statusRef.current === 'active';
+                let activeAnimation = null;
+                const isPaused = status === 'paused';
+                const isActive = status === 'active';
 
-                    if (isActive) return; // Dragging handles its own pos
+                if (isActive) return; // Wait for release
 
-                    const target = getRandomPos();
-                    // If paused, move very very slowly in a tight area
-                    const duration = isPaused ? 40 : (12 + Math.random() * 10);
+                const runLoop = () => {
+                    const target = getRandomPos(x.get(), y.get());
+                    const duration = isPaused ? 25 : (8 + Math.random() * 6);
 
                     const controlsX = FramerMotionLib.animate(x, target.x, {
                         duration, ease: "easeInOut"
@@ -374,24 +379,24 @@
                         duration: duration * (0.9 + Math.random() * 0.2), ease: "easeInOut"
                     });
 
-                    currentMovement = { stop: () => { controlsX.stop(); controlsY.stop(); } };
+                    activeAnimation = { stop: () => { controlsX.stop(); controlsY.stop(); } };
 
                     Promise.all([controlsX, controlsY]).then(() => {
-                        animateToNext();
-                    });
+                        if (statusRef.current === status) runLoop();
+                    }).catch(() => { });
                 };
 
-                const rotation = FramerMotionLib.animate(rotate, [-3, 3, -3], {
-                    duration: 5 + Math.random() * 3, repeat: Infinity, ease: "easeInOut"
+                const rotation = FramerMotionLib.animate(rotate, [-8, 8, -8], {
+                    duration: 3 + Math.random() * 2, repeat: Infinity, ease: "easeInOut"
                 });
 
-                animateToNext();
+                runLoop();
 
                 return () => {
-                    if (currentMovement) currentMovement.stop();
+                    if (activeAnimation) activeAnimation.stop();
                     rotation.stop();
                 };
-            }, [windowSize]); // Restart when window size changes
+            }, [windowSize, status]);
 
             const handleDown = (e) => {
                 if (e.target.closest('.delete-x')) return;
@@ -400,19 +405,18 @@
                 FramerMotionLib.animate(scale, 1.4, { duration: 0.2, ease: "backOut" });
             };
 
-            const handleRelease = async () => {
+            const handleRelease = () => {
                 if (statusRef.current !== 'active') return;
                 statusRef.current = 'paused';
                 setStatus('paused');
 
-                // Wait while in slow hover mode
-                await new Promise(resolve => setTimeout(resolve, 1800));
-
-                if (statusRef.current !== 'paused') return;
-
-                statusRef.current = 'floating';
-                FramerMotionLib.animate(scale, 1, { duration: 0.5, ease: "easeOut" });
-                setStatus('floating');
+                setTimeout(() => {
+                    if (statusRef.current === 'paused') {
+                        statusRef.current = 'floating';
+                        FramerMotionLib.animate(scale, 1, { duration: 0.5, ease: "easeOut" });
+                        setStatus('floating');
+                    }
+                }, 1800);
             };
 
             return (

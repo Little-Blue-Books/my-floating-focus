@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Floating Focus | Seamless Canvas</title>
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -15,7 +15,7 @@
         href="https://fonts.googleapis.com/css2?family=Kiwi+Maru:wght@400;500&family=Inter:wght@400;600;700&display=swap"
         rel="stylesheet">
 
-    <!-- CDN Links for Standalone Execution -->
+    <!-- CDNリンク (Babelを含むスタンドアロン実行用) -->
     <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -30,6 +30,7 @@
                 0 10px 25px rgba(0, 0, 0, 0.08);
         }
 
+        /* 画面全体のスクロールとズームを徹底排除 */
         html,
         body {
             margin: 0;
@@ -38,12 +39,12 @@
             height: 100%;
             overflow: hidden !important;
             position: fixed;
-            /* Lock viewport on iOS */
             background-color: var(--canvas-bg);
             font-family: 'Kiwi Maru', sans-serif;
             -webkit-overflow-scrolling: touch;
             touch-action: none;
             user-select: none;
+            -webkit-user-select: none;
         }
 
         #root {
@@ -53,9 +54,17 @@
             touch-action: none;
         }
 
+        #canvas {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            position: relative;
+            touch-action: none;
+        }
+
         .header {
             position: fixed;
-            top: 1.25rem;
+            top: env(safe-area-inset-top, 1.25rem);
             left: 1.25rem;
             z-index: 1000;
             pointer-events: none;
@@ -72,13 +81,15 @@
 
         .input-container {
             position: fixed;
-            top: 1.25rem;
+            top: env(safe-area-inset-top, 1.25rem);
             left: 50%;
             transform: translateX(-50%);
             z-index: 1000;
             width: 100%;
             max-width: 440px;
             padding: 0 1rem;
+            box-sizing: border-box;
+            touch-action: pan-x pan-y;
         }
 
         .input-wrapper {
@@ -89,17 +100,19 @@
             border-radius: 12px;
             box-shadow: 0 8px 30px rgba(0, 0, 0, 0.04);
             border: 1px solid rgba(0, 0, 0, 0.03);
+            pointer-events: auto;
         }
 
         input {
             flex: 1;
             border: none;
             padding: 0.6rem 1rem;
-            font-size: 0.95rem;
+            font-size: 16px; /* iOSの自動ズーム防止 */
             outline: none;
             background: transparent;
             color: var(--text-primary);
             font-family: 'Kiwi Maru', sans-serif;
+            touch-action: manipulation;
         }
 
         .add-btn {
@@ -112,6 +125,7 @@
             cursor: pointer;
             transition: all 0.2s;
             font-family: 'Inter', sans-serif;
+            touch-action: manipulation;
         }
 
         .sticky-note {
@@ -130,6 +144,7 @@
             background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.1) 0%, rgba(0, 0, 0, 0.02) 100%);
             transition: box-shadow 0.2s;
             touch-action: none;
+            box-sizing: border-box;
         }
 
         @media (max-width: 600px) {
@@ -138,39 +153,10 @@
                 height: 100px;
                 padding: 0.6rem;
             }
-
-            .note-text {
-                font-size: 0.75rem;
-            }
-
-            .input-container {
-                width: 90%;
-                max-width: none;
-            }
-
-            .input-wrapper {
-                border-radius: 10px;
-                padding: 0.2rem;
-            }
-
-            input {
-                padding: 0.5rem 0.75rem;
-                font-size: 0.9rem;
-            }
-
-            .add-btn {
-                padding: 0 0.75rem;
-                font-size: 0.85rem;
-            }
-
-            .folded-corner {
-                border-width: 0 12px 12px 0;
-            }
-
-            .sticky-note::before {
-                width: 12px;
-                height: 12px;
-            }
+            .note-text { font-size: 0.75rem; }
+            .input-container { width: 90%; max-width: none; }
+            .folded-corner { border-width: 0 12px 12px 0; }
+            .sticky-note::before { width: 12px; height: 12px; }
         }
 
         .folded-corner {
@@ -198,9 +184,9 @@
         }
 
         .note-text {
-            font-size: 1.3rem;
+            font-size: 1.1rem;
             font-weight: 500;
-            line-height: 1.5;
+            line-height: 1.4;
             color: var(--text-primary);
             word-wrap: break-word;
             max-width: 100%;
@@ -216,7 +202,6 @@
             cursor: pointer;
             font-size: 2rem;
             padding: 24px;
-            /* Massive hit area */
             opacity: 0;
             display: flex;
             align-items: center;
@@ -224,27 +209,19 @@
             transition: opacity 0.2s, color 0.2s, transform 0.2s;
             z-index: 5;
             -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
         }
 
-        .delete-x.visible {
-            opacity: 1;
-            color: rgba(0, 0, 0, 0.5);
-        }
-
-        .sticky-note:hover .delete-x {
-            opacity: 1;
-        }
-
-        .delete-x:hover {
-            color: #ff7675;
-            transform: scale(1.2);
-        }
+        .delete-x.visible { opacity: 1; color: rgba(0, 0, 0, 0.5); }
+        .sticky-note:hover .delete-x { opacity: 1; }
+        .delete-x:hover { color: #ff7675; transform: scale(1.2); }
 
         .view-toggle {
             position: fixed;
-            bottom: 1.5rem;
+            bottom: env(safe-area-inset-bottom, 1.5rem);
             right: 1.5rem;
             z-index: 1000;
+            touch-action: manipulation;
         }
 
         .toggle-pill {
@@ -257,6 +234,7 @@
             opacity: 0.5;
             cursor: pointer;
             font-family: 'Inter', sans-serif;
+            touch-action: manipulation;
         }
 
         .list-container {
@@ -266,6 +244,8 @@
             gap: 2rem;
             height: 100vh;
             overflow-y: auto;
+            touch-action: pan-y;
+            box-sizing: border-box;
         }
     </style>
 </head>
@@ -278,7 +258,7 @@
         const { useState, useEffect, useMemo, useRef } = React;
         const { motion, AnimatePresence } = FramerMotionLib;
 
-        // --- Audio Logic (Soap Bubble Pop via Web Audio API) ---
+        // --- Audio Logic ---
         let audioCtx = null;
         const initAudio = () => {
             try {
@@ -289,137 +269,98 @@
                 if (audioCtx.state === "suspended") {
                     audioCtx.resume();
                 }
-                // Play a tiny silent note to force unlock on iPad
-                const osc = audioCtx.createOscillator();
-                const gain = audioCtx.createGain();
-                gain.gain.value = 0.0001;
-                osc.connect(gain);
-                gain.connect(audioCtx.destination);
-                osc.start(0);
-                osc.stop(0.001);
-            } catch (e) { }
+            } catch (e) { console.warn("Audio Context Error", e); }
         };
-        // More aggressive unlocking
-        window.addEventListener("mousedown", initAudio, { once: true });
-        window.addEventListener("touchstart", initAudio, { once: true });
-        window.addEventListener("click", initAudio, { once: true });
 
         const playPopSound = () => {
             try {
                 initAudio();
                 if (!audioCtx) return;
-
                 const context = audioCtx;
                 const osc = context.createOscillator();
                 const gain = context.createGain();
-
                 osc.type = "sine";
                 osc.frequency.setValueAtTime(800, context.currentTime);
                 osc.frequency.exponentialRampToValueAtTime(120, context.currentTime + 0.1);
-
                 gain.gain.setValueAtTime(0.3, context.currentTime);
                 gain.gain.exponentialRampToValueAtTime(0.01, context.currentTime + 0.1);
-
                 osc.connect(gain);
                 gain.connect(context.destination);
-
                 osc.start();
                 osc.stop(context.currentTime + 0.12);
-            } catch (e) {
-                console.warn("Audio feedback not supported", e);
-            }
+            } catch (e) { console.warn("Audio feedback error", e); }
         };
 
         const NOTE_SIZE = 130;
         const MOBILE_NOTE_SIZE = 100;
 
         const SoapBubbleNote = ({ task, onDelete, windowSize }) => {
-            const [status, setStatus] = useState('floating'); // 'floating', 'active', 'paused'
+            const [status, setStatus] = useState('floating');
             const statusRef = useRef('floating');
 
-            // Motion Values
             const x = FramerMotionLib.useMotionValue(0);
             const y = FramerMotionLib.useMotionValue(0);
             const scale = FramerMotionLib.useMotionValue(1);
             const rotate = FramerMotionLib.useMotionValue(0);
 
-            const driftRef = useRef(null);
             const colors = ['#fff9c4', '#fce4ec', '#e3f2fd', '#f1f8e9'];
             const bgColor = useMemo(() => colors[Math.floor(Math.random() * colors.length)], []);
 
             const isMobile = windowSize.width < 600;
             const currentNoteSize = isMobile ? MOBILE_NOTE_SIZE : NOTE_SIZE;
 
-            // Helper to get random coord (Picks a spot in the opposite quadrant for flow)
-            const getRandomPos = (curX, curY) => {
-                const maxX = windowSize.width - currentNoteSize;
-                const maxY = windowSize.height - currentNoteSize;
-                const targetX = curX > maxX / 2 ? Math.random() * (maxX * 0.4) : (maxX * 0.6) + Math.random() * (maxX * 0.4);
-                const targetY = curY > maxY / 2 ? Math.random() * (maxY * 0.4) : (maxY * 0.6) + Math.random() * (maxY * 0.4);
-                return { x: targetX, y: targetY };
-            };
+            const clampPos = (val, max) => Math.min(Math.max(0, val), Math.max(0, max - currentNoteSize));
 
-            // Bounce Effect (Powan) logic
-            useEffect(() => {
-                const maxX = windowSize.width - currentNoteSize;
-                const maxY = windowSize.height - currentNoteSize;
-                let lastBounce = 0;
-
-                const checkBounce = (val, max) => {
-                    if (statusRef.current !== 'floating') return;
-                    if ((val <= 5 || val >= max - 5) && Date.now() - lastBounce > 800) {
-                        lastBounce = Date.now();
-                        FramerMotionLib.animate(scale, [1, 1.1, 1], { duration: 0.5, ease: "easeOut" });
-                    }
+            const getRandomPos = () => {
+                const maxX = Math.max(0, windowSize.width - currentNoteSize);
+                const maxY = Math.max(0, windowSize.height - currentNoteSize);
+                return {
+                    x: Math.random() * maxX,
+                    y: Math.random() * maxY
                 };
-
-                const unsubX = x.on("change", (v) => checkBounce(v, maxX));
-                const unsubY = y.on("change", (v) => checkBounce(v, maxY));
-                return () => { unsubX(); unsubY(); };
-            }, [windowSize, currentNoteSize]);
+            };
 
             const isFirstMount = useRef(true);
             useEffect(() => {
                 if (isFirstMount.current) {
-                    const startPos = { x: Math.random() * (windowSize.width - currentNoteSize), y: Math.random() * (windowSize.height - currentNoteSize) };
-                    x.set(startPos.x);
-                    y.set(startPos.y);
+                    x.set(Math.random() * Math.max(0, windowSize.width - currentNoteSize));
+                    y.set(Math.random() * Math.max(0, windowSize.height - currentNoteSize));
                     isFirstMount.current = false;
                 }
+            }, []);
 
-                let activeAnimation = null;
-                const isPaused = status === 'paused';
-                const isActive = status === 'active';
+            useEffect(() => {
+                x.set(clampPos(x.get(), windowSize.width));
+                y.set(clampPos(y.get(), windowSize.height));
+            }, [windowSize]);
 
-                if (isActive) return; // Wait for release
+            useEffect(() => {
+                if (status !== 'floating') return;
 
+                let stopRequested = false;
                 const runLoop = () => {
-                    const target = getRandomPos(x.get(), y.get());
-                    const duration = isPaused ? 25 : (8 + Math.random() * 6);
+                    if (stopRequested || statusRef.current !== 'floating') return;
+                    
+                    const target = getRandomPos();
+                    const duration = 6 + Math.random() * 4;
 
-                    const controlsX = FramerMotionLib.animate(x, target.x, {
-                        duration, ease: "easeInOut"
-                    });
-                    const controlsY = FramerMotionLib.animate(y, target.y, {
-                        duration: duration * (0.9 + Math.random() * 0.2), ease: "easeInOut"
-                    });
+                    const animX = FramerMotionLib.animate(x, target.x, { duration, ease: "easeInOut" });
+                    const animY = FramerMotionLib.animate(y, target.y, { duration: duration * 1.1, ease: "easeInOut" });
 
-                    activeAnimation = { stop: () => { controlsX.stop(); controlsY.stop(); } };
-
-                    Promise.all([controlsX, controlsY]).then(() => {
-                        if (statusRef.current === status) runLoop();
-                    }).catch(() => { });
+                    Promise.all([animX, animY]).then(() => {
+                        if (!stopRequested) runLoop();
+                    }).catch(() => {});
                 };
 
-                const rotation = FramerMotionLib.animate(rotate, [-8, 8, -8], {
-                    duration: 3 + Math.random() * 2, repeat: Infinity, ease: "easeInOut"
+                const animRotate = FramerMotionLib.animate(rotate, [-5, 5, -5], {
+                    duration: 4, repeat: Infinity, ease: "easeInOut"
                 });
 
                 runLoop();
 
                 return () => {
-                    if (activeAnimation) activeAnimation.stop();
-                    rotation.stop();
+                    stopRequested = true;
+                    animRotate.stop();
                 };
             }, [windowSize, status]);
 
@@ -427,51 +368,37 @@
                 if (e.target.closest('.delete-x')) return;
                 statusRef.current = 'active';
                 setStatus('active');
-                FramerMotionLib.animate(scale, 1.4, { duration: 0.2, ease: "backOut" });
+                FramerMotionLib.animate(scale, 1.2, { duration: 0.2 });
             };
 
             const handleRelease = () => {
-                if (statusRef.current !== 'active') return;
-                statusRef.current = 'paused';
-                setStatus('paused');
-
-                setTimeout(() => {
-                    if (statusRef.current === 'paused') {
-                        statusRef.current = 'floating';
-                        FramerMotionLib.animate(scale, 1, { duration: 0.5, ease: "easeOut" });
-                        setStatus('floating');
-                    }
-                }, 1800);
+                statusRef.current = 'floating';
+                setStatus('floating');
+                FramerMotionLib.animate(scale, 1, { duration: 0.4 });
             };
 
             return (
                 <motion.div
-                    layout
                     drag
                     dragMomentum={false}
                     dragConstraints={{
                         left: 0,
-                        right: windowSize.width - currentNoteSize,
+                        right: Math.max(0, windowSize.width - currentNoteSize),
                         top: 0,
-                        bottom: windowSize.height - currentNoteSize
+                        bottom: Math.max(0, windowSize.height - currentNoteSize)
                     }}
                     onPointerDown={handleDown}
                     onPointerUp={handleRelease}
-                    onDragStart={() => {
-                        statusRef.current = 'active';
-                        setStatus('active');
-                        FramerMotionLib.animate(scale, 1.4, { duration: 0.15, ease: "backOut" });
-                    }}
                     onDragEnd={handleRelease}
                     initial={{ opacity: 0, scale: 0.5 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    exit={{ scale: 1.4, opacity: 0, filter: 'blur(5px)', transition: { duration: 0.2 } }}
+                    exit={{ scale: 1.5, opacity: 0, filter: 'blur(10px)' }}
                     style={{
                         position: 'absolute',
                         top: 0,
                         left: 0,
                         x, y, scale, rotate,
-                        zIndex: (status === 'active' || status === 'paused') ? 100 : 10,
+                        zIndex: status === 'active' ? 100 : 10,
                         touchAction: 'none'
                     }}
                 >
@@ -480,11 +407,10 @@
                         <div className="note-text">{task.text}</div>
                         <button
                             className={`delete-x ${status !== 'floating' ? 'visible' : ''}`}
-                            onPointerDown={(e) => { e.stopPropagation(); }}
-                            onClick={(e) => {
+                            onPointerDown={e => e.stopPropagation()}
+                            onClick={e => {
                                 e.stopPropagation();
-                                e.preventDefault();
-                                if (typeof initAudio === 'function') initAudio();
+                                playPopSound();
                                 onDelete(task.id);
                             }}
                         >×</button>
@@ -494,33 +420,47 @@
         };
 
         const App = () => {
-            const [tasks, setTasks] = useState([]);
+            const [tasks, setTasks] = useState([
+                { id: 1, text: "深呼吸をしてみる" },
+                { id: 2, text: "少し歩いてみる" }
+            ]);
             const [inputValue, setInputValue] = useState("");
             const [viewMode, setViewMode] = useState("float");
-            const [windowSize, setWindowSize] = useState({ width: window.innerWidth, height: window.innerHeight });
+            const [windowSize, setWindowSize] = useState({ 
+                width: window.innerWidth, 
+                height: window.innerHeight 
+            });
 
             useEffect(() => {
-                const handleResize = () => setWindowSize({ width: window.innerWidth, height: window.innerHeight });
-                window.addEventListener('resize', handleResize);
+                const updateSize = () => {
+                    setWindowSize({
+                        width: window.visualViewport ? window.visualViewport.width : window.innerWidth,
+                        height: window.visualViewport ? window.visualViewport.height : window.innerHeight
+                    });
+                };
 
-                // Prevent all default browser gestures (scroll, pinch, etc.)
+                window.addEventListener('resize', updateSize);
+                if (window.visualViewport) {
+                    window.visualViewport.addEventListener('resize', updateSize);
+                }
+
                 const preventDefault = (e) => {
-                    // Allow interaction for input and buttons
-                    if (e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON' || e.target.closest('button')) {
+                    const target = e.target;
+                    if (target.tagName === 'INPUT' || target.tagName === 'BUTTON' || target.closest('button')) {
                         return;
                     }
-                    if (e.touches && e.touches.length > 1) {
-                        e.preventDefault(); // Block pinch zoom
-                    }
-                    e.preventDefault();
+                    if (e.cancelable) e.preventDefault();
                 };
 
                 document.addEventListener('touchmove', preventDefault, { passive: false });
                 document.addEventListener('wheel', preventDefault, { passive: false });
                 document.addEventListener('gesturestart', preventDefault, { passive: false });
 
+                updateSize();
+
                 return () => {
-                    window.removeEventListener('resize', handleResize);
+                    window.removeEventListener('resize', updateSize);
+                    if (window.visualViewport) window.visualViewport.removeEventListener('resize', updateSize);
                     document.removeEventListener('touchmove', preventDefault);
                     document.removeEventListener('wheel', preventDefault);
                     document.removeEventListener('gesturestart', preventDefault);
@@ -531,21 +471,22 @@
                 if (!inputValue.trim()) return;
                 setTasks(prev => [...prev, { id: Date.now(), text: inputValue }]);
                 setInputValue("");
+                document.activeElement.blur();
             };
 
             const deleteTask = (id) => {
-                playPopSound();
                 setTasks(prev => prev.filter(t => t.id !== id));
             };
 
             return (
                 <div id="canvas">
                     <header className="header"><div className="title">FLOATING FOCUS</div></header>
+                    
                     <div className="input-container">
                         <div className="input-wrapper">
                             <input
                                 type="text"
-                                placeholder="いま、頭にあることをそっと浮かべてみる？"
+                                placeholder="いまの気持ちを浮かべてみる..."
                                 value={inputValue}
                                 onChange={(e) => setInputValue(e.target.value)}
                                 onKeyPress={(e) => e.key === 'Enter' && addTask()}
@@ -553,13 +494,18 @@
                             <button className="add-btn" onClick={addTask}>Add</button>
                         </div>
                     </div>
+
                     <div className="view-toggle">
-                        <button className="toggle-pill" onClick={() => setViewMode(viewMode === 'float' ? 'list' : 'float')}>
-                            {viewMode === 'float' ? 'Organize to List' : 'Let them Float'}
+                        <button className="toggle-pill" onClick={() => {
+                            initAudio();
+                            setViewMode(viewMode === 'float' ? 'list' : 'float');
+                        }}>
+                            {viewMode === 'float' ? 'リストで整える' : '浮かべて眺める'}
                         </button>
                     </div>
+
                     {viewMode === 'float' ? (
-                        <div style={{ width: '100vw', height: '100vh', position: 'relative', overflow: 'hidden' }}>
+                        <div style={{ width: '100%', height: '100%', position: 'absolute', top: 0, left: 0, overflow: 'hidden' }}>
                             <AnimatePresence>
                                 {tasks.map(task => (
                                     <SoapBubbleNote key={task.id} task={task} onDelete={deleteTask} windowSize={windowSize} />
@@ -572,7 +518,10 @@
                                 {tasks.map(task => (
                                     <div key={task.id} className="sticky-note" style={{ backgroundColor: '#fff9c4' }}>
                                         <div className="note-text">{task.text}</div>
-                                        <button className="delete-x visible" onClick={() => deleteTask(task.id)}>×</button>
+                                        <button className="delete-x visible" onClick={() => {
+                                            playPopSound();
+                                            deleteTask(task.id);
+                                        }}>×</button>
                                     </div>
                                 ))}
                             </AnimatePresence>
@@ -582,8 +531,10 @@
             );
         };
 
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<App />);
+        const rootLayout = ReactDOM.createRoot(document.getElementById('root'));
+        rootLayout.render(<App />);
+
+        window.addEventListener('touchstart', initAudio, { once: true });
     </script>
 </body>
 

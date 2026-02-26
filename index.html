@@ -16,7 +16,6 @@
         href="https://fonts.googleapis.com/css2?family=Kiwi+Maru:wght@400;500&family=Inter:wght@400;600;700&display=swap"
         rel="stylesheet">
 
-    <!-- CDNリンク (Babelを含むスタンドアロン実行用) -->
     <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -31,7 +30,6 @@
                 0 10px 25px rgba(0, 0, 0, 0.08);
         }
 
-        /* 画面全体のスクロールとズームを徹底排除 */
         html,
         body {
             margin: 0;
@@ -65,19 +63,20 @@
 
         .header {
             position: fixed;
-            top: env(safe-area-inset-top, 1.25rem);
-            left: 1.25rem;
+            top: env(safe-area-inset-top, 1rem);
+            left: 1rem;
             z-index: 1000;
             pointer-events: none;
         }
 
         .title {
-            font-size: 0.8rem;
+            font-size: 0.75rem;
             font-weight: 500;
             color: var(--text-primary);
             opacity: 0.3;
             letter-spacing: 1px;
             font-family: 'Inter', sans-serif;
+            white-space: nowrap;
         }
 
         .input-container {
@@ -85,9 +84,10 @@
             top: env(safe-area-inset-top, 1rem);
             left: 50%;
             transform: translateX(-50%);
-            z-index: 1000;
-            width: 90%;
-            max-width: 500px;
+            z-index: 1001;
+            /* ヘッダーより上に */
+            width: calc(100% - 2rem);
+            max-width: 480px;
             box-sizing: border-box;
             touch-action: pan-x pan-y;
         }
@@ -95,42 +95,46 @@
         .input-wrapper {
             background: white;
             display: flex;
-            gap: 0.4rem;
-            padding: 0.4rem;
-            border-radius: 12px;
+            align-items: center;
+            gap: 0.3rem;
+            padding: 0.3rem;
+            border-radius: 14px;
             box-shadow: 0 8px 30px rgba(0, 0, 0, 0.06);
             border: 1px solid rgba(0, 0, 0, 0.05);
             pointer-events: auto;
+            overflow: hidden;
+            /* はみ出し防止 */
         }
 
         input {
             flex: 1;
+            min-width: 0;
+            /* Flex-shrinkを有効にするために必須 */
             border: none;
-            padding: 0.5rem 0.6rem;
+            padding: 0.6rem 0.8rem;
             font-size: 16px;
-            /* iOSの自動ズーム防止 */
+            /* iOS自動ズーム防止 */
             outline: none;
             background: transparent;
             color: var(--text-primary);
             font-family: 'Kiwi Maru', sans-serif;
             touch-action: manipulation;
-            min-width: 0;
-            /* フレックスアイテムの縮小を許可 */
         }
 
         .add-btn {
+            flex-shrink: 0;
+            /* ボタンは縮ませない */
             background: #2d3436;
             color: white;
             border: none;
-            padding: 0 0.8rem;
-            border-radius: 9px;
+            padding: 0.6rem 1rem;
+            border-radius: 10px;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.2s;
             font-family: 'Inter', sans-serif;
             touch-action: manipulation;
-            white-space: nowrap;
-            flex-shrink: 0;
+            font-size: 0.9rem;
         }
 
         .sticky-note {
@@ -147,17 +151,32 @@
             cursor: grab;
             border-radius: 2px;
             background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.1) 0%, rgba(0, 0, 0, 0.02) 100%);
-            transition: box-shadow 0.2s;
             touch-action: none;
             box-sizing: border-box;
         }
 
-        @media (max-width: 600px) {
+        @media (max-width: 400px) {
             .input-container {
-                width: 85%;
-                /* 左右に余白を確保してAddボタンを見やすく */
+                width: calc(100% - 1rem);
             }
 
+            .add-btn {
+                padding: 0.6rem 0.8rem;
+                font-size: 0.85rem;
+            }
+
+            input {
+                padding: 0.6rem 0.5rem;
+            }
+
+            .title {
+                display: none;
+            }
+
+            /* 極端に狭い時はタイトルを隠す */
+        }
+
+        @media (max-width: 600px) {
             .sticky-note {
                 width: 100px;
                 height: 100px;
@@ -175,11 +194,6 @@
             .sticky-note::before {
                 width: 12px;
                 height: 12px;
-            }
-
-            .header {
-                top: env(safe-area-inset-top, 0.5rem);
-                left: 0.5rem;
             }
         }
 
@@ -218,36 +232,24 @@
 
         .delete-x {
             position: absolute;
-            bottom: -10px;
-            right: -10px;
-            background: none;
-            border: none;
-            color: rgba(0, 0, 0, 0.15);
+            bottom: -5px;
+            right: -5px;
+            background: white;
+            /* 重なりで見やすく */
+            border-radius: 50%;
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            color: rgba(0, 0, 0, 0.4);
             cursor: pointer;
-            font-size: 2rem;
-            padding: 24px;
-            opacity: 0;
+            font-size: 1.5rem;
+            width: 40px;
+            height: 40px;
             display: flex;
             align-items: center;
             justify-content: center;
-            transition: opacity 0.2s, color 0.2s, transform 0.2s;
-            z-index: 5;
-            -webkit-tap-highlight-color: transparent;
+            z-index: 10;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
             touch-action: manipulation;
-        }
-
-        .delete-x.visible {
-            opacity: 1;
-            color: rgba(0, 0, 0, 0.5);
-        }
-
-        .sticky-note:hover .delete-x {
-            opacity: 1;
-        }
-
-        .delete-x:hover {
-            color: #ff7675;
-            transform: scale(1.2);
+            -webkit-tap-highlight-color: transparent;
         }
 
         .view-toggle {
@@ -261,14 +263,13 @@
         .toggle-pill {
             background: white;
             border: 1px solid rgba(0, 0, 0, 0.05);
-            padding: 0.5rem 1rem;
-            border-radius: 20px;
-            font-size: 0.8rem;
+            padding: 0.6rem 1.2rem;
+            border-radius: 24px;
+            font-size: 0.85rem;
             color: var(--text-primary);
-            opacity: 0.5;
             cursor: pointer;
             font-family: 'Inter', sans-serif;
-            touch-action: manipulation;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
         }
 
         .list-container {
@@ -295,21 +296,18 @@
         // --- Audio Logic ---
         let audioCtx = null;
         const initAudio = () => {
+            if (audioCtx) return;
             try {
-                if (!audioCtx) {
-                    const AudioContext = window.AudioContext || window.webkitAudioContext;
-                    audioCtx = new AudioContext();
-                }
-                if (audioCtx.state === "suspended") {
-                    audioCtx.resume();
-                }
-            } catch (e) { console.warn("Audio Context Error", e); }
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                audioCtx = new AudioContext();
+            } catch (e) { }
         };
 
         const playPopSound = () => {
             try {
-                initAudio();
+                if (!audioCtx) initAudio();
                 if (!audioCtx) return;
+                if (audioCtx.state === "suspended") audioCtx.resume();
                 const context = audioCtx;
                 const osc = context.createOscillator();
                 const gain = context.createGain();
@@ -322,7 +320,7 @@
                 gain.connect(context.destination);
                 osc.start();
                 osc.stop(context.currentTime + 0.12);
-            } catch (e) { console.warn("Audio feedback error", e); }
+            } catch (e) { }
         };
 
         const NOTE_SIZE = 130;
@@ -348,10 +346,7 @@
             const getRandomPos = () => {
                 const maxX = Math.max(0, windowSize.width - currentNoteSize);
                 const maxY = Math.max(0, windowSize.height - currentNoteSize);
-                return {
-                    x: Math.random() * maxX,
-                    y: Math.random() * maxY
-                };
+                return { x: Math.random() * maxX, y: Math.random() * maxY };
             };
 
             const isFirstMount = useRef(true);
@@ -370,46 +365,21 @@
 
             useEffect(() => {
                 if (status !== 'floating') return;
-
                 let stopRequested = false;
                 const runLoop = () => {
                     if (stopRequested || statusRef.current !== 'floating') return;
-
                     const target = getRandomPos();
-                    const duration = 6 + Math.random() * 4;
-
+                    const duration = 7 + Math.random() * 5;
                     const animX = FramerMotionLib.animate(x, target.x, { duration, ease: "easeInOut" });
                     const animY = FramerMotionLib.animate(y, target.y, { duration: duration * 1.1, ease: "easeInOut" });
-
-                    Promise.all([animX, animY]).then(() => {
-                        if (!stopRequested) runLoop();
-                    }).catch(() => { });
+                    Promise.all([animX, animY]).then(() => { if (!stopRequested) runLoop(); });
                 };
-
                 const animRotate = FramerMotionLib.animate(rotate, [-5, 5, -5], {
                     duration: 4, repeat: Infinity, ease: "easeInOut"
                 });
-
                 runLoop();
-
-                return () => {
-                    stopRequested = true;
-                    animRotate.stop();
-                };
+                return () => { stopRequested = true; animRotate.stop(); };
             }, [windowSize, status]);
-
-            const handleDown = (e) => {
-                if (e.target.closest('.delete-x')) return;
-                statusRef.current = 'active';
-                setStatus('active');
-                FramerMotionLib.animate(scale, 1.2, { duration: 0.2 });
-            };
-
-            const handleRelease = () => {
-                statusRef.current = 'floating';
-                setStatus('floating');
-                FramerMotionLib.animate(scale, 1, { duration: 0.4 });
-            };
 
             return (
                 <motion.div
@@ -421,21 +391,25 @@
                         top: 0,
                         bottom: Math.max(0, windowSize.height - currentNoteSize)
                     }}
-                    onPointerDown={handleDown}
-                    onPointerUp={handleRelease}
-                    onDragStart={() => {
-                        setStatus('active');
+                    onPointerDown={(e) => {
+                        if (e.target.closest('.delete-x')) return;
                         statusRef.current = 'active';
+                        setStatus('active');
+                        FramerMotionLib.animate(scale, 1.2, { duration: 0.2 });
                     }}
-                    onDragEnd={handleRelease}
+                    onPointerUp={() => {
+                        statusRef.current = 'floating';
+                        setStatus('floating');
+                        FramerMotionLib.animate(scale, 1, { duration: 0.4 });
+                    }}
+                    onDragStart={() => { setStatus('active'); statusRef.current = 'active'; }}
+                    onDragEnd={() => { statusRef.current = 'floating'; setStatus('floating'); }}
                     initial={{ opacity: 0, scale: 0.5 }}
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ scale: 1.5, opacity: 0, filter: 'blur(10px)' }}
                     style={{
                         position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        x, y, scale, rotate,
+                        top: 0, left: 0, x, y, scale, rotate,
                         zIndex: status === 'active' ? 100 : 10,
                         touchAction: 'none'
                     }}
@@ -443,77 +417,64 @@
                     <div className="sticky-note" style={{ backgroundColor: bgColor }}>
                         <div className="folded-corner"></div>
                         <div className="note-text">{task.text}</div>
-                        <button
-                            className={`delete-x ${status !== 'floating' ? 'visible' : ''}`}
-                            onPointerDown={e => e.stopPropagation()}
-                            onClick={e => {
+                        <div
+                            className="delete-x"
+                            onPointerDown={e => {
                                 e.stopPropagation();
                                 playPopSound();
                                 onDelete(task.id);
                             }}
-                        >×</button>
+                        >×</div>
                     </div>
                 </motion.div>
             );
         };
 
         const App = () => {
-            // LocalStorageからデータを読み込む
-            const loadTasks = () => {
-                const saved = localStorage.getItem('floating_tasks');
-                if (saved) {
-                    try {
-                        return JSON.parse(saved);
-                    } catch (e) {
-                        console.error("Failed to parse tasks", e);
+            // ステートの初期化時に一度だけLocalStorageを読み込む
+            const [tasks, setTasks] = useState(() => {
+                try {
+                    const saved = localStorage.getItem('floating_tasks_v2');
+                    if (saved) {
+                        const parsed = JSON.parse(saved);
+                        if (Array.isArray(parsed)) return parsed;
                     }
-                }
+                } catch (e) { }
                 return [
                     { id: 1, text: "深呼吸をしてみる" },
                     { id: 2, text: "少し歩いてみる" }
                 ];
-            };
+            });
 
-            const [tasks, setTasks] = useState(loadTasks);
             const [inputValue, setInputValue] = useState("");
             const [viewMode, setViewMode] = useState("float");
-            const [windowSize, setWindowSize] = useState({
-                width: window.innerWidth,
-                height: window.innerHeight
-            });
+            const [windowSize, setWindowSize] = useState({ width: window.innerWidth, height: window.innerHeight });
 
             // タスクが変更されるたびにLocalStorageに保存
             useEffect(() => {
-                localStorage.setItem('floating_tasks', JSON.stringify(tasks));
+                try {
+                    localStorage.setItem('floating_tasks_v2', JSON.stringify(tasks));
+                } catch (e) { }
             }, [tasks]);
 
             useEffect(() => {
                 const updateSize = () => {
-                    setWindowSize({
-                        width: window.visualViewport ? window.visualViewport.width : window.innerWidth,
-                        height: window.visualViewport ? window.visualViewport.height : window.innerHeight
-                    });
+                    const w = window.visualViewport ? window.visualViewport.width : window.innerWidth;
+                    const h = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+                    setWindowSize({ width: w, height: h });
                 };
-
                 window.addEventListener('resize', updateSize);
-                if (window.visualViewport) {
-                    window.visualViewport.addEventListener('resize', updateSize);
-                }
+                if (window.visualViewport) window.visualViewport.addEventListener('resize', updateSize);
 
                 const preventDefault = (e) => {
-                    const target = e.target;
-                    if (target.tagName === 'INPUT' || target.tagName === 'BUTTON' || target.closest('button')) {
-                        return;
-                    }
+                    if (e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON' || e.target.closest('.add-btn') || e.target.closest('.delete-x') || e.target.closest('.toggle-pill')) return;
                     if (e.cancelable) e.preventDefault();
                 };
-
                 document.addEventListener('touchmove', preventDefault, { passive: false });
                 document.addEventListener('wheel', preventDefault, { passive: false });
                 document.addEventListener('gesturestart', preventDefault, { passive: false });
 
                 updateSize();
-
                 return () => {
                     window.removeEventListener('resize', updateSize);
                     if (window.visualViewport) window.visualViewport.removeEventListener('resize', updateSize);
@@ -542,7 +503,7 @@
                         <div className="input-wrapper">
                             <input
                                 type="text"
-                                placeholder="いまの気持ちを浮かべてみる..."
+                                placeholder="いま、心にあることは？"
                                 value={inputValue}
                                 onChange={(e) => setInputValue(e.target.value)}
                                 onKeyPress={(e) => e.key === 'Enter' && addTask()}
@@ -574,10 +535,7 @@
                                 {tasks.map(task => (
                                     <div key={task.id} className="sticky-note" style={{ backgroundColor: '#fff9c4' }}>
                                         <div className="note-text">{task.text}</div>
-                                        <button className="delete-x visible" onClick={() => {
-                                            playPopSound();
-                                            deleteTask(task.id);
-                                        }}>×</button>
+                                        <div className="delete-x" style={{ opacity: 1 }} onPointerDown={() => { playPopSound(); deleteTask(task.id); }}>×</div>
                                     </div>
                                 ))}
                             </AnimatePresence>

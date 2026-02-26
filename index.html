@@ -276,7 +276,16 @@
         const { useState, useEffect, useMemo, useRef, useCallback } = React;
 
         // --- Utils: LocalStorage ---
-        const STORAGE_KEY = 'FloatingFocus_v20_StableStore';
+        // 旧バージョンのキーを全て削除して統一する
+        const STORAGE_KEY = 'FloatingFocus_FINAL_v1';
+        (() => {
+            const oldKeys = [
+                'floating_tasks_v3', 'floating_tasks_v4_final', 'floating_tasks_session_v1',
+                'floating_focus_data_v5', 'floating_focus_v10_stable', 'FloatingFocus_v12_FinalPackage',
+                'FloatingFocus_v20_StableStore'
+            ];
+            oldKeys.forEach(k => localStorage.removeItem(k));
+        })();
         const saveTasks = (tasks) => {
             try {
                 localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
@@ -285,16 +294,27 @@
         const loadTasks = () => {
             try {
                 const s = localStorage.getItem(STORAGE_KEY);
-                return s ? JSON.parse(s) : null;
+                if (s !== null) return JSON.parse(s); // 空配列 [] も正しく返す
+                return null;
             } catch (e) { return null; }
         };
 
-        // --- Audio Logic ---
+        // --- Audio Logic: iOSではユーザー操作中に初期化必須 ---
         let audioCtx = null;
-        const playPop = () => {
+        const initAudio = () => {
             try {
                 if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                if (audioCtx.state === "suspended") audioCtx.resume();
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+            } catch (e) { }
+        };
+        const playPop = () => {
+            try {
+                initAudio();
+                if (!audioCtx || audioCtx.state !== 'running') {
+                    // まだ起動していなければ短時間後にリトライ
+                    setTimeout(playPop, 100);
+                    return;
+                }
                 const o = audioCtx.createOscillator();
                 const g = audioCtx.createGain();
                 o.type = "sine";
@@ -306,6 +326,9 @@
                 o.start(); o.stop(audioCtx.currentTime + 0.12);
             } catch (e) { }
         };
+        // 最初のタッチでオーディオを起動
+        document.addEventListener('touchstart', initAudio, { once: true });
+        document.addEventListener('mousedown', initAudio, { once: true });
 
         const SoapBubbleNote = ({ task, onDelete, windowSize, isListMode }) => {
             // 位置・状態の管理
@@ -370,9 +393,17 @@
                 return () => cancelAnimationFrame(raf);
             }, [status, isListMode, windowSize, size]);
 
+            const statusRef = useRef('floating');
+            const resumeTimerRef = useRef(null);
+
             // ドラッグ実装
             const handlePointerDown = (e) => {
                 if (e.target.closest('.delete-btn-area')) return;
+                // 音声コンテキストをここで初期化（iOS対応）
+                initAudio();
+                // 復帰タイマーをクリア
+                if (resumeTimerRef.current) clearTimeout(resumeTimerRef.current);
+                statusRef.current = 'active';
                 setStatus('active');
                 dragRef.current = {
                     startX: e.clientX,
@@ -385,6 +416,8 @@
             };
 
             const handlePointerMove = (e) => {
+                if (statusRef.current === 'floating') return;
+                statusRef.current = 'dragging';
                 setStatus('dragging');
                 const dx = e.clientX - dragRef.current.startX;
                 const dy = e.clientY - dragRef.current.startY;
@@ -397,9 +430,16 @@
             };
 
             const handlePointerUp = () => {
-                setStatus('floating');
                 window.removeEventListener('pointermove', handlePointerMove);
                 window.removeEventListener('pointerup', handlePointerUp);
+                // タップ後、2秒間はアクティブ状態（大きい）を維持してから浮遊再開
+                statusRef.current = 'held';
+                setStatus('active'); // is-active クラスを維持
+                if (resumeTimerRef.current) clearTimeout(resumeTimerRef.current);
+                resumeTimerRef.current = setTimeout(() => {
+                    statusRef.current = 'floating';
+                    setStatus('floating');
+                }, 2000);
             };
 
             const wrapperStyle = isListMode ? {} : {

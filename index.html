@@ -395,15 +395,24 @@
                         if (e.target.closest('.delete-x')) return;
                         statusRef.current = 'active';
                         setStatus('active');
-                        FramerMotionLib.animate(scale, 1.2, { duration: 0.2 });
+                        FramerMotionLib.animate(scale, 1.3, { duration: 0.2, ease: "backOut" });
                     }}
                     onPointerUp={() => {
+                        if (statusRef.current !== 'active') return;
                         statusRef.current = 'floating';
                         setStatus('floating');
-                        FramerMotionLib.animate(scale, 1, { duration: 0.4 });
+                        FramerMotionLib.animate(scale, 1, { duration: 0.4, ease: "easeOut" });
                     }}
-                    onDragStart={() => { setStatus('active'); statusRef.current = 'active'; }}
-                    onDragEnd={() => { statusRef.current = 'floating'; setStatus('floating'); }}
+                    onDragStart={() => {
+                        statusRef.current = 'active';
+                        setStatus('active');
+                        FramerMotionLib.animate(scale, 1.3, { duration: 0.15, ease: "backOut" });
+                    }}
+                    onDragEnd={() => {
+                        statusRef.current = 'floating';
+                        setStatus('floating');
+                        FramerMotionLib.animate(scale, 1, { duration: 0.4, ease: "easeOut" });
+                    }}
                     initial={{ opacity: 0, scale: 0.5 }}
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ scale: 1.5, opacity: 0, filter: 'blur(10px)' }}

@@ -67,19 +67,17 @@
             font-size: 0.7rem;
             font-weight: 500;
             color: var(--text-primary);
-            opacity: 0.25;
+            opacity: 0.2;
             letter-spacing: 1px;
             font-family: 'Inter', sans-serif;
         }
 
-        /* 入力エリア：画面端に寄りすぎないよう調整 */
         .input-container {
             position: fixed;
             top: env(safe-area-inset-top, 1rem);
             left: 50%;
             transform: translateX(-50%);
             z-index: 5000;
-            /* 最前面を確実に保証 */
             width: 94%;
             max-width: 480px;
             box-sizing: border-box;
@@ -87,14 +85,14 @@
         }
 
         .input-wrapper {
-            background: rgba(255, 255, 255, 0.95);
+            background: rgba(255, 255, 255, 0.96);
             backdrop-filter: blur(10px);
             display: flex;
             align-items: center;
             gap: 0.4rem;
             padding: 0.4rem;
             border-radius: 16px;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
             border: 1px solid rgba(0, 0, 0, 0.08);
             pointer-events: auto;
         }
@@ -109,7 +107,6 @@
             background: transparent;
             color: var(--text-primary);
             font-family: 'Kiwi Maru', sans-serif;
-            touch-action: manipulation;
         }
 
         .add-btn {
@@ -121,14 +118,8 @@
             border-radius: 12px;
             font-weight: 600;
             cursor: pointer;
-            transition: transform 0.2s, background 0.2s;
             font-family: 'Inter', sans-serif;
-            touch-action: manipulation;
             font-size: 0.9rem;
-        }
-
-        .add-btn:active {
-            transform: scale(0.95);
         }
 
         .sticky-note {
@@ -147,35 +138,21 @@
             touch-action: none;
             box-sizing: border-box;
             -webkit-tap-highlight-color: transparent;
-            /* SafariでJSが追いつかない時のためのCSS transition */
-            transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
-            will-change: transform;
-        }
-
-        /* アクティブ時のスケールをCSSでも強制 */
-        .sticky-note.is-active {
-            transform: scale(1.4) !important;
-            z-index: 1000 !important;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15) !important;
         }
 
         @media (max-width: 500px) {
             .sticky-note {
-                width: 105px;
-                height: 105px;
-                padding: 0.6rem;
+                width: 115px;
+                height: 115px;
+                padding: 0.8rem;
             }
 
             .note-text {
-                font-size: 0.8rem;
+                font-size: 0.9rem;
             }
 
             .folded-corner {
                 border-width: 0 12px 12px 0;
-            }
-
-            .add-btn {
-                padding: 0.6rem 0.9rem;
             }
         }
 
@@ -183,8 +160,6 @@
             position: absolute;
             top: 0;
             right: 0;
-            width: 0;
-            height: 0;
             border-style: solid;
             border-width: 0 16px 16px 0;
             border-color: transparent white transparent transparent;
@@ -221,7 +196,6 @@
             border-radius: 50%;
             border: 1px solid rgba(0, 0, 0, 0.1);
             color: rgba(0, 0, 0, 0.5);
-            cursor: pointer;
             font-size: 1.6rem;
             width: 44px;
             height: 44px;
@@ -230,7 +204,6 @@
             justify-content: center;
             z-index: 110;
             box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-            touch-action: manipulation;
         }
 
         .view-toggle {
@@ -238,7 +211,6 @@
             bottom: env(safe-area-inset-bottom, 1.5rem);
             right: 1.5rem;
             z-index: 4000;
-            touch-action: manipulation;
         }
 
         .toggle-pill {
@@ -260,7 +232,6 @@
             gap: 2rem;
             height: 100vh;
             overflow-y: auto;
-            touch-action: pan-y;
             box-sizing: border-box;
         }
     </style>
@@ -305,7 +276,7 @@
         };
 
         const NOTE_SIZE = 130;
-        const MOBILE_NOTE_SIZE = 105;
+        const MOBILE_NOTE_SIZE = 115;
 
         const SoapBubbleNote = ({ task, onDelete, windowSize }) => {
             const [isActive, setIsActive] = useState(false);
@@ -321,8 +292,6 @@
             const isMobile = windowSize.width < 500;
             const currentNoteSize = isMobile ? MOBILE_NOTE_SIZE : NOTE_SIZE;
 
-            const clampPos = (val, max) => Math.min(Math.max(0, val), Math.max(0, max - currentNoteSize));
-
             const getRandomPos = useCallback(() => {
                 const maxX = Math.max(0, windowSize.width - currentNoteSize);
                 const maxY = Math.max(0, windowSize.height - currentNoteSize);
@@ -332,10 +301,10 @@
                 const preferLeft = curX > maxX / 2;
                 const preferTop = curY > maxY / 2;
 
-                const targetX = preferLeft ? Math.random() * (maxX * 0.4) : (maxX * 0.6) + Math.random() * (maxX * 0.4);
-                const targetY = preferTop ? Math.random() * (maxY * 0.4) : (maxY * 0.6) + Math.random() * (maxY * 0.4);
-
-                return { x: targetX, y: targetY };
+                return {
+                    x: preferLeft ? Math.random() * (maxX * 0.4) : (maxX * 0.6) + Math.random() * (maxX * 0.4),
+                    y: preferTop ? Math.random() * (maxY * 0.4) : (maxY * 0.6) + Math.random() * (maxY * 0.4)
+                };
             }, [windowSize, currentNoteSize, x, y]);
 
             useEffect(() => {
@@ -352,7 +321,7 @@
                 const runLoop = () => {
                     if (stopRequested || activeRef.current) return;
                     const target = getRandomPos();
-                    const duration = 12 + Math.random() * 8; // 更にゆったりと
+                    const duration = 12 + Math.random() * 8;
 
                     controlsX = FramerMotionLib.animate(x, target.x, { duration, ease: "easeInOut" });
                     controlsY = FramerMotionLib.animate(y, target.y, { duration: duration * 1.1, ease: "easeInOut" });
@@ -400,8 +369,13 @@
                     onDragStart={handleStart}
                     onDragEnd={handleEnd}
                     initial={{ opacity: 0, scale: 0.5 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ scale: 2.0, opacity: 0, filter: 'blur(15px)', transition: { duration: 0.3 } }}
+                    animate={{
+                        opacity: 1,
+                        scale: isActive ? 1.4 : 1 // スケールを確実に1にする
+                    }}
+                    transition={{
+                        scale: { type: "spring", stiffness: 300, damping: 20 }
+                    }}
                     style={{
                         position: 'absolute',
                         top: 0, left: 0, x, y, rotate,
@@ -409,10 +383,7 @@
                         zIndex: isActive ? 1000 : 10
                     }}
                 >
-                    <div
-                        className={`sticky-note ${isActive ? 'is-active' : ''}`}
-                        style={{ backgroundColor: bgColor }}
-                    >
+                    <div className="sticky-note" style={{ backgroundColor: bgColor }}>
                         <div className="folded-corner"></div>
                         <div className="note-text">{task.text}</div>
                         <div
@@ -429,14 +400,13 @@
         };
 
         const App = () => {
-            const STORAGE_KEY = 'floating_tasks_session_v1';
+            const STORAGE_KEY = 'floating_focus_data_v5';
 
             const [tasks, setTasks] = useState(() => {
                 try {
                     const saved = localStorage.getItem(STORAGE_KEY);
                     if (saved !== null) {
-                        const parsed = JSON.parse(saved);
-                        if (Array.isArray(parsed)) return parsed; // 空配列でも許可！
+                        return JSON.parse(saved);
                     }
                 } catch (e) { }
                 return [
@@ -452,7 +422,6 @@
                 height: window.innerHeight
             });
 
-            // 保存処理
             useEffect(() => {
                 localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
             }, [tasks]);
@@ -467,8 +436,7 @@
                 if (window.visualViewport) window.visualViewport.addEventListener('resize', updateSize);
 
                 const preventDefault = (e) => {
-                    const t = e.target;
-                    if (t.tagName === 'INPUT' || t.tagName === 'BUTTON' || t.closest('.input-wrapper') || t.closest('.delete-x') || t.closest('.view-toggle')) return;
+                    if (e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON' || e.target.closest('.input-wrapper') || e.target.closest('.delete-x') || e.target.closest('.view-toggle')) return;
                     if (e.cancelable) e.preventDefault();
                 };
                 document.addEventListener('touchmove', preventDefault, { passive: false });
@@ -499,7 +467,6 @@
             return (
                 <div id="canvas">
                     <header className="header"><div className="title">FLOATING FOCUS</div></header>
-
                     <div className="input-container">
                         <div className="input-wrapper">
                             <input
@@ -548,7 +515,6 @@
 
         const rootLayout = ReactDOM.createRoot(document.getElementById('root'));
         rootLayout.render(<App />);
-
         window.addEventListener('touchstart', initAudio, { once: true });
     </script>
 </body>

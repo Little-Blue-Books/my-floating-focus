@@ -3,7 +3,8 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Floating Focus | Seamless Canvas</title>
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -15,19 +16,17 @@
         href="https://fonts.googleapis.com/css2?family=Kiwi+Maru:wght@400;500&family=Inter:wght@400;600;700&display=swap"
         rel="stylesheet">
 
-    <!-- CDN Links for Standalone Execution -->
+    <!-- Frameworks -->
     <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <script src="https://unpkg.com/framer-motion@10.16.4/dist/framer-motion.js"></script>
 
     <style>
         :root {
             --canvas-bg: #ffffff;
             --text-primary: #2d3436;
-            --shadow-multi:
-                0 4px 6px rgba(0, 0, 0, 0.02),
-                0 10px 25px rgba(0, 0, 0, 0.08);
+            --note-size: 140px;
+            --note-size-mobile: 115px;
         }
 
         html,
@@ -38,64 +37,72 @@
             height: 100%;
             overflow: hidden !important;
             position: fixed;
-            /* Lock viewport on iOS */
             background-color: var(--canvas-bg);
             font-family: 'Kiwi Maru', sans-serif;
-            -webkit-overflow-scrolling: touch;
             touch-action: none;
             user-select: none;
+            -webkit-user-select: none;
         }
 
-        #root {
+        #root,
+        #canvas {
             width: 100vw;
             height: 100vh;
             position: relative;
             touch-action: none;
+            overflow: hidden;
         }
 
         .header {
             position: fixed;
-            top: 1.25rem;
-            left: 1.25rem;
+            top: env(safe-area-inset-top, 1.25rem);
+            left: 1.5rem;
             z-index: 1000;
             pointer-events: none;
         }
 
         .title {
-            font-size: 0.9rem;
+            font-size: 0.8rem;
             font-weight: 500;
             color: var(--text-primary);
-            opacity: 0.4;
-            letter-spacing: 1px;
+            opacity: 0.3;
+            letter-spacing: 1.5px;
             font-family: 'Inter', sans-serif;
+            text-transform: uppercase;
         }
 
+        /* 入力エリア：常に最前面 */
         .input-container {
             position: fixed;
-            top: 1.25rem;
+            top: env(safe-area-inset-top, 1.2rem);
             left: 50%;
             transform: translateX(-50%);
-            z-index: 1000;
-            width: 100%;
-            max-width: 440px;
-            padding: 0 1rem;
+            z-index: 10000;
+            width: 90%;
+            max-width: 500px;
+            box-sizing: border-box;
+            pointer-events: none;
         }
 
         .input-wrapper {
-            background: white;
+            background: rgba(255, 255, 255, 0.98);
+            backdrop-filter: blur(15px);
             display: flex;
+            align-items: center;
             gap: 0.5rem;
-            padding: 0.4rem;
-            border-radius: 12px;
-            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.04);
-            border: 1px solid rgba(0, 0, 0, 0.03);
+            padding: 0.4rem 0.5rem;
+            border-radius: 18px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            pointer-events: auto;
         }
 
         input {
             flex: 1;
+            min-width: 0;
             border: none;
-            padding: 0.6rem 1rem;
-            font-size: 0.95rem;
+            padding: 0.6rem 0.8rem;
+            font-size: 16px;
             outline: none;
             background: transparent;
             color: var(--text-primary);
@@ -106,70 +113,78 @@
             background: #2d3436;
             color: white;
             border: none;
-            padding: 0 1.25rem;
-            border-radius: 10px;
+            padding: 0.7rem 1.4rem;
+            border-radius: 14px;
             font-weight: 600;
             cursor: pointer;
-            transition: all 0.2s;
             font-family: 'Inter', sans-serif;
+            font-size: 0.95rem;
+            touch-action: manipulation;
         }
 
+        /* 付箋コンテナ：ライブラリを使わず、絶対座標で制御 */
+        .note-wrapper {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: var(--note-size);
+            height: var(--note-size);
+            will-change: transform;
+            /* 拡大時のみ z-index を上げる */
+            z-index: 10;
+        }
+
+        /* 付箋本体 */
         .sticky-note {
             position: relative;
-            width: 130px;
-            height: 130px;
+            width: 100%;
+            height: 100%;
             padding: 1rem;
-            box-shadow: var(--shadow-multi);
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
             text-align: center;
-            cursor: grab;
+            background-color: #fff9c4;
+            /* デフォルトカラー */
             border-radius: 2px;
-            background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.1) 0%, rgba(0, 0, 0, 0.02) 100%);
-            transition: box-shadow 0.2s;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.06);
+            background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.1) 0%, rgba(0, 0, 0, 0.04) 100%);
+            box-sizing: border-box;
             touch-action: none;
+
+            /* アニメーション：CSS transitionに一本化 */
+            transition: transform 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28), box-shadow 0.3s ease;
+            transform: scale(1);
+        }
+
+        /* アクティブ（タップ中）のスタイル：Safariでも確実に効かせる */
+        .note-wrapper.is-active {
+            z-index: 1000;
+        }
+
+        .note-wrapper.is-active .sticky-note {
+            transform: scale(1.4);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15);
+        }
+
+        .note-wrapper.is-dragging .sticky-note {
+            transition: none;
+            /* ドラッグ中は追従を優先するためtransitionを切る */
         }
 
         @media (max-width: 600px) {
-            .sticky-note {
-                width: 100px;
-                height: 100px;
-                padding: 0.6rem;
+            .note-wrapper {
+                width: var(--note-size-mobile);
+                height: var(--note-size-mobile);
             }
 
             .note-text {
-                font-size: 0.75rem;
-            }
-
-            .input-container {
-                width: 90%;
-                max-width: none;
-            }
-
-            .input-wrapper {
-                border-radius: 10px;
-                padding: 0.2rem;
-            }
-
-            input {
-                padding: 0.5rem 0.75rem;
-                font-size: 0.9rem;
-            }
-
-            .add-btn {
-                padding: 0 0.75rem;
                 font-size: 0.85rem;
             }
 
             .folded-corner {
-                border-width: 0 12px 12px 0;
-            }
-
-            .sticky-note::before {
-                width: 12px;
-                height: 12px;
+                border-width: 12px;
             }
         }
 
@@ -182,90 +197,74 @@
             border-style: solid;
             border-width: 0 16px 16px 0;
             border-color: transparent white transparent transparent;
-            filter: drop-shadow(-2px 2px 2px rgba(0, 0, 0, 0.1));
             z-index: 2;
         }
 
-        .sticky-note::before {
-            content: "";
+        /* 削除ボタンを付箋の外側に配置しやすくする */
+        .delete-btn-area {
             position: absolute;
-            top: 0;
-            right: 0;
-            width: 16px;
-            height: 16px;
-            background: white;
-            z-index: 1;
-        }
-
-        .note-text {
-            font-size: 1.3rem;
-            font-weight: 500;
-            line-height: 1.5;
-            color: var(--text-primary);
-            word-wrap: break-word;
-            max-width: 100%;
-        }
-
-        .delete-x {
-            position: absolute;
-            bottom: -10px;
-            right: -10px;
-            background: none;
-            border: none;
-            color: rgba(0, 0, 0, 0.15);
-            cursor: pointer;
-            font-size: 2rem;
-            padding: 24px;
-            /* Massive hit area */
-            opacity: 0;
+            bottom: -15px;
+            right: -15px;
+            z-index: 1100;
+            width: 44px;
+            height: 44px;
             display: flex;
             align-items: center;
             justify-content: center;
-            transition: opacity 0.2s, color 0.2s, transform 0.2s;
-            z-index: 5;
-            -webkit-tap-highlight-color: transparent;
+            background: white;
+            border-radius: 50%;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+            border: 1px solid rgba(0, 0, 0, 0.05);
+            color: rgba(0, 0, 0, 0.4);
+            font-size: 1.5rem;
+            cursor: pointer;
+            touch-action: manipulation;
         }
 
-        .delete-x.visible {
-            opacity: 1;
-            color: rgba(0, 0, 0, 0.5);
-        }
-
-        .sticky-note:hover .delete-x {
-            opacity: 1;
-        }
-
-        .delete-x:hover {
-            color: #ff7675;
-            transform: scale(1.2);
+        .note-text {
+            font-size: 1.1rem;
+            font-weight: 500;
+            color: var(--text-primary);
+            line-height: 1.4;
+            word-wrap: break-word;
+            pointer-events: none;
         }
 
         .view-toggle {
             position: fixed;
-            bottom: 1.5rem;
+            bottom: env(safe-area-inset-bottom, 1.5rem);
             right: 1.5rem;
-            z-index: 1000;
+            z-index: 9000;
         }
 
         .toggle-pill {
             background: white;
-            border: 1px solid rgba(0, 0, 0, 0.05);
-            padding: 0.5rem 1rem;
-            border-radius: 20px;
-            font-size: 0.8rem;
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            padding: 0.75rem 1.75rem;
+            border-radius: 30px;
+            font-size: 0.9rem;
             color: var(--text-primary);
-            opacity: 0.5;
             cursor: pointer;
-            font-family: 'Inter', sans-serif;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
         }
 
         .list-container {
-            padding: 8rem 2rem 2rem;
+            padding: 10rem 2rem 2rem;
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
-            gap: 2rem;
+            gap: 2.5rem;
             height: 100vh;
             overflow-y: auto;
+            box-sizing: border-box;
+            touch-action: pan-y;
+        }
+
+        /* リストモード用の付箋調整 */
+        .list-container .note-wrapper {
+            position: relative;
+            top: auto !important;
+            left: auto !important;
+            transform: none !important;
         }
     </style>
 </head>
@@ -274,316 +273,230 @@
     <div id="root"></div>
 
     <script type="text/babel">
-        const FramerMotionLib = window.FramerMotion || window.Motion;
-        const { useState, useEffect, useMemo, useRef } = React;
-        const { motion, AnimatePresence } = FramerMotionLib;
+        const { useState, useEffect, useMemo, useRef, useCallback } = React;
 
-        // --- Audio Logic (Soap Bubble Pop via Web Audio API) ---
-        let audioCtx = null;
-        const initAudio = () => {
+        // --- Utils: LocalStorage ---
+        const STORAGE_KEY = 'FloatingFocus_v20_StableStore';
+        const saveTasks = (tasks) => {
             try {
-                if (!audioCtx) {
-                    const AudioContext = window.AudioContext || window.webkitAudioContext;
-                    audioCtx = new AudioContext();
-                }
-                if (audioCtx.state === "suspended") {
-                    audioCtx.resume();
-                }
-                // Play a tiny silent note to force unlock on iPad
-                const osc = audioCtx.createOscillator();
-                const gain = audioCtx.createGain();
-                gain.gain.value = 0.0001;
-                osc.connect(gain);
-                gain.connect(audioCtx.destination);
-                osc.start(0);
-                osc.stop(0.001);
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
             } catch (e) { }
         };
-        // More aggressive unlocking
-        window.addEventListener("mousedown", initAudio, { once: true });
-        window.addEventListener("touchstart", initAudio, { once: true });
-        window.addEventListener("click", initAudio, { once: true });
-
-        const playPopSound = () => {
+        const loadTasks = () => {
             try {
-                initAudio();
-                if (!audioCtx) return;
-
-                const context = audioCtx;
-                const osc = context.createOscillator();
-                const gain = context.createGain();
-
-                osc.type = "sine";
-                osc.frequency.setValueAtTime(800, context.currentTime);
-                osc.frequency.exponentialRampToValueAtTime(120, context.currentTime + 0.1);
-
-                gain.gain.setValueAtTime(0.3, context.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.01, context.currentTime + 0.1);
-
-                osc.connect(gain);
-                gain.connect(context.destination);
-
-                osc.start();
-                osc.stop(context.currentTime + 0.12);
-            } catch (e) {
-                console.warn("Audio feedback not supported", e);
-            }
+                const s = localStorage.getItem(STORAGE_KEY);
+                return s ? JSON.parse(s) : null;
+            } catch (e) { return null; }
         };
 
-        const NOTE_SIZE = 130;
-        const MOBILE_NOTE_SIZE = 100;
+        // --- Audio Logic ---
+        let audioCtx = null;
+        const playPop = () => {
+            try {
+                if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                if (audioCtx.state === "suspended") audioCtx.resume();
+                const o = audioCtx.createOscillator();
+                const g = audioCtx.createGain();
+                o.type = "sine";
+                o.frequency.setValueAtTime(800, audioCtx.currentTime);
+                o.frequency.exponentialRampToValueAtTime(120, audioCtx.currentTime + 0.1);
+                g.gain.setValueAtTime(0.3, audioCtx.currentTime);
+                g.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+                o.connect(g); g.connect(audioCtx.destination);
+                o.start(); o.stop(audioCtx.currentTime + 0.12);
+            } catch (e) { }
+        };
 
-        const SoapBubbleNote = ({ task, onDelete, windowSize }) => {
-            const [status, setStatus] = useState('floating'); // 'floating', 'active', 'paused'
-            const statusRef = useRef('floating');
+        const SoapBubbleNote = ({ task, onDelete, windowSize, isListMode }) => {
+            // 位置・状態の管理
+            const [pos, setPos] = useState({ x: 0, y: 0 });
+            const [rotation, setRotation] = useState(0);
+            const [status, setStatus] = useState('floating'); // floating, dragging, active
 
-            // Motion Values
-            const x = FramerMotionLib.useMotionValue(0);
-            const y = FramerMotionLib.useMotionValue(0);
-            const scale = FramerMotionLib.useMotionValue(1);
-            const rotate = FramerMotionLib.useMotionValue(0);
-
-            const driftRef = useRef(null);
+            const posRef = useRef({ x: 0, y: 0 }); // ドラッグ・アニメーション用
+            const dragRef = useRef({ startX: 0, startY: 0, initialX: 0, initialY: 0 });
             const colors = ['#fff9c4', '#fce4ec', '#e3f2fd', '#f1f8e9'];
             const bgColor = useMemo(() => colors[Math.floor(Math.random() * colors.length)], []);
 
             const isMobile = windowSize.width < 600;
-            const currentNoteSize = isMobile ? MOBILE_NOTE_SIZE : NOTE_SIZE;
+            const size = isMobile ? 115 : 140;
 
-            // Helper to get random coord (Picks a spot in the opposite quadrant for flow)
-            const getRandomPos = (curX, curY) => {
-                const maxX = windowSize.width - currentNoteSize;
-                const maxY = windowSize.height - currentNoteSize;
-                const targetX = curX > maxX / 2 ? Math.random() * (maxX * 0.4) : (maxX * 0.6) + Math.random() * (maxX * 0.4);
-                const targetY = curY > maxY / 2 ? Math.random() * (maxY * 0.4) : (maxY * 0.6) + Math.random() * (maxY * 0.4);
-                return { x: targetX, y: targetY };
-            };
-
-            // Bounce Effect (Powan) logic
+            // 初期位置
             useEffect(() => {
-                const maxX = windowSize.width - currentNoteSize;
-                const maxY = windowSize.height - currentNoteSize;
-                let lastBounce = 0;
+                const x = Math.random() * (windowSize.width - size);
+                const y = Math.random() * (windowSize.height - size);
+                posRef.current = { x, y };
+                setPos({ x, y });
+            }, []);
 
-                const checkBounce = (val, max) => {
-                    if (statusRef.current !== 'floating') return;
-                    if ((val <= 5 || val >= max - 5) && Date.now() - lastBounce > 800) {
-                        lastBounce = Date.now();
-                        FramerMotionLib.animate(scale, [1, 1.1, 1], { duration: 0.5, ease: "easeOut" });
+            // 浮遊アニメーション
+            useEffect(() => {
+                if (isListMode || status !== 'floating') return;
+
+                let raf;
+                let target = { x: Math.random() * (windowSize.width - size), y: Math.random() * (windowSize.height - size) };
+                let startTime = performance.now();
+                const duration = 15000 + Math.random() * 10000;
+                const startPos = { ...posRef.current };
+
+                const step = (time) => {
+                    if (status !== 'floating') return;
+                    const elapsed = time - startTime;
+                    const progress = Math.min(elapsed / duration, 1);
+
+                    // イージング
+                    const ease = progress < 0.5 ? 2 * progress * progress : 1 - Math.pow(-2 * progress + 2, 2) / 2;
+
+                    posRef.current = {
+                        x: startPos.x + (target.x - startPos.x) * ease,
+                        y: startPos.y + (target.y - startPos.y) * ease
+                    };
+                    setPos({ ...posRef.current });
+                    setRotation(Math.sin(elapsed / 2000) * 5);
+
+                    if (progress < 1) {
+                        raf = requestAnimationFrame(step);
+                    } else {
+                        // 次の目的地へ
+                        startTime = performance.now();
+                        target = { x: Math.random() * (windowSize.width - size), y: Math.random() * (windowSize.height - size) };
+                        startPos.x = posRef.current.x;
+                        startPos.y = posRef.current.y;
+                        raf = requestAnimationFrame(step);
                     }
                 };
 
-                const unsubX = x.on("change", (v) => checkBounce(v, maxX));
-                const unsubY = y.on("change", (v) => checkBounce(v, maxY));
-                return () => { unsubX(); unsubY(); };
-            }, [windowSize, currentNoteSize]);
+                raf = requestAnimationFrame(step);
+                return () => cancelAnimationFrame(raf);
+            }, [status, isListMode, windowSize, size]);
 
-            const isFirstMount = useRef(true);
-            useEffect(() => {
-                if (isFirstMount.current) {
-                    const startPos = { x: Math.random() * (windowSize.width - currentNoteSize), y: Math.random() * (windowSize.height - currentNoteSize) };
-                    x.set(startPos.x);
-                    y.set(startPos.y);
-                    isFirstMount.current = false;
-                }
-
-                let activeAnimation = null;
-                const isPaused = status === 'paused';
-                const isActive = status === 'active';
-
-                if (isActive) return; // Wait for release
-
-                const runLoop = () => {
-                    const target = getRandomPos(x.get(), y.get());
-                    const duration = isPaused ? 25 : (8 + Math.random() * 6);
-
-                    const controlsX = FramerMotionLib.animate(x, target.x, {
-                        duration, ease: "easeInOut"
-                    });
-                    const controlsY = FramerMotionLib.animate(y, target.y, {
-                        duration: duration * (0.9 + Math.random() * 0.2), ease: "easeInOut"
-                    });
-
-                    activeAnimation = { stop: () => { controlsX.stop(); controlsY.stop(); } };
-
-                    Promise.all([controlsX, controlsY]).then(() => {
-                        if (statusRef.current === status) runLoop();
-                    }).catch(() => { });
-                };
-
-                const rotation = FramerMotionLib.animate(rotate, [-8, 8, -8], {
-                    duration: 3 + Math.random() * 2, repeat: Infinity, ease: "easeInOut"
-                });
-
-                runLoop();
-
-                return () => {
-                    if (activeAnimation) activeAnimation.stop();
-                    rotation.stop();
-                };
-            }, [windowSize, status]);
-
-            const handleDown = (e) => {
-                if (e.target.closest('.delete-x')) return;
-                statusRef.current = 'active';
+            // ドラッグ実装
+            const handlePointerDown = (e) => {
+                if (e.target.closest('.delete-btn-area')) return;
                 setStatus('active');
-                FramerMotionLib.animate(scale, 1.4, { duration: 0.2, ease: "backOut" });
+                dragRef.current = {
+                    startX: e.clientX,
+                    startY: e.clientY,
+                    initialX: posRef.current.x,
+                    initialY: posRef.current.y
+                };
+                window.addEventListener('pointermove', handlePointerMove);
+                window.addEventListener('pointerup', handlePointerUp);
             };
 
-            const handleRelease = () => {
-                if (statusRef.current !== 'active') return;
-                statusRef.current = 'paused';
-                setStatus('paused');
+            const handlePointerMove = (e) => {
+                setStatus('dragging');
+                const dx = e.clientX - dragRef.current.startX;
+                const dy = e.clientY - dragRef.current.startY;
 
-                setTimeout(() => {
-                    if (statusRef.current === 'paused') {
-                        statusRef.current = 'floating';
-                        FramerMotionLib.animate(scale, 1, { duration: 0.5, ease: "easeOut" });
-                        setStatus('floating');
-                    }
-                }, 1800);
+                posRef.current = {
+                    x: Math.min(Math.max(0, dragRef.current.initialX + dx), windowSize.width - size),
+                    y: Math.min(Math.max(0, dragRef.current.initialY + dy), windowSize.height - size)
+                };
+                setPos({ ...posRef.current });
+            };
+
+            const handlePointerUp = () => {
+                setStatus('floating');
+                window.removeEventListener('pointermove', handlePointerMove);
+                window.removeEventListener('pointerup', handlePointerUp);
+            };
+
+            const wrapperStyle = isListMode ? {} : {
+                transform: `translate3d(${pos.x}px, ${pos.y}px, 0) rotate(${rotation}deg)`
             };
 
             return (
-                <motion.div
-                    layout
-                    drag
-                    dragMomentum={false}
-                    dragConstraints={{
-                        left: 0,
-                        right: windowSize.width - currentNoteSize,
-                        top: 0,
-                        bottom: windowSize.height - currentNoteSize
-                    }}
-                    onPointerDown={handleDown}
-                    onPointerUp={handleRelease}
-                    onDragStart={() => {
-                        statusRef.current = 'active';
-                        setStatus('active');
-                        FramerMotionLib.animate(scale, 1.4, { duration: 0.15, ease: "backOut" });
-                    }}
-                    onDragEnd={handleRelease}
-                    initial={{ opacity: 0, scale: 0.5 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ scale: 1.4, opacity: 0, filter: 'blur(5px)', transition: { duration: 0.2 } }}
-                    style={{
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        x, y, scale, rotate,
-                        zIndex: (status === 'active' || status === 'paused') ? 100 : 10,
-                        touchAction: 'none'
-                    }}
+                <div
+                    className={`note-wrapper ${status !== 'floating' ? 'is-active' : ''} ${status === 'dragging' ? 'is-dragging' : ''}`}
+                    style={wrapperStyle}
+                    onPointerDown={isListMode ? null : handlePointerDown}
                 >
                     <div className="sticky-note" style={{ backgroundColor: bgColor }}>
                         <div className="folded-corner"></div>
                         <div className="note-text">{task.text}</div>
-                        <button
-                            className={`delete-x ${status !== 'floating' ? 'visible' : ''}`}
-                            onPointerDown={(e) => { e.stopPropagation(); }}
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                e.preventDefault();
-                                if (typeof initAudio === 'function') initAudio();
-                                onDelete(task.id);
-                            }}
-                        >×</button>
+                        <div
+                            className="delete-btn-area"
+                            onPointerDown={e => { e.stopPropagation(); playPop(); onDelete(task.id); }}
+                        >×</div>
                     </div>
-                </motion.div>
+                </div>
             );
         };
 
         const App = () => {
-            const [tasks, setTasks] = useState([]);
+            const [tasks, setTasks] = useState(() => {
+                const saved = loadTasks();
+                return saved !== null ? saved : [
+                    { id: 1, text: "深呼吸をしてみる" },
+                    { id: 2, text: "少し歩いてみる" }
+                ];
+            });
+
             const [inputValue, setInputValue] = useState("");
             const [viewMode, setViewMode] = useState("float");
             const [windowSize, setWindowSize] = useState({ width: window.innerWidth, height: window.innerHeight });
 
             useEffect(() => {
-                const handleResize = () => setWindowSize({ width: window.innerWidth, height: window.innerHeight });
-                window.addEventListener('resize', handleResize);
+                saveTasks(tasks);
+            }, [tasks]);
 
-                // Prevent all default browser gestures (scroll, pinch, etc.)
-                const preventDefault = (e) => {
-                    // Allow interaction for input and buttons
-                    if (e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON' || e.target.closest('button')) {
-                        return;
-                    }
-                    if (e.touches && e.touches.length > 1) {
-                        e.preventDefault(); // Block pinch zoom
-                    }
-                    e.preventDefault();
-                };
-
-                document.addEventListener('touchmove', preventDefault, { passive: false });
-                document.addEventListener('wheel', preventDefault, { passive: false });
-                document.addEventListener('gesturestart', preventDefault, { passive: false });
-
-                return () => {
-                    window.removeEventListener('resize', handleResize);
-                    document.removeEventListener('touchmove', preventDefault);
-                    document.removeEventListener('wheel', preventDefault);
-                    document.removeEventListener('gesturestart', preventDefault);
-                };
+            useEffect(() => {
+                const update = () => setWindowSize({ width: window.innerWidth, height: window.innerHeight });
+                window.addEventListener('resize', update);
+                return () => window.removeEventListener('resize', update);
             }, []);
 
             const addTask = () => {
                 if (!inputValue.trim()) return;
-                setTasks(prev => [...prev, { id: Date.now(), text: inputValue }]);
+                setTasks(prev => [...prev, { id: Date.now(), text: inputValue.trim() }]);
                 setInputValue("");
-            };
-
-            const deleteTask = (id) => {
-                playPopSound();
-                setTasks(prev => prev.filter(t => t.id !== id));
             };
 
             return (
                 <div id="canvas">
-                    <header className="header"><div className="title">FLOATING FOCUS</div></header>
+                    <header className="header"><div className="title">Floating Focus</div></header>
                     <div className="input-container">
                         <div className="input-wrapper">
                             <input
-                                type="text"
                                 placeholder="いま、頭にあることをそっと浮かべてみる？"
                                 value={inputValue}
-                                onChange={(e) => setInputValue(e.target.value)}
-                                onKeyPress={(e) => e.key === 'Enter' && addTask()}
+                                onChange={e => setInputValue(e.target.value)}
+                                onKeyPress={e => e.key === 'Enter' && addTask()}
                             />
                             <button className="add-btn" onClick={addTask}>Add</button>
                         </div>
                     </div>
+
                     <div className="view-toggle">
                         <button className="toggle-pill" onClick={() => setViewMode(viewMode === 'float' ? 'list' : 'float')}>
-                            {viewMode === 'float' ? 'Organize to List' : 'Let them Float'}
+                            {viewMode === 'float' ? 'リストで整える' : '浮かべて眺める'}
                         </button>
                     </div>
-                    {viewMode === 'float' ? (
-                        <div style={{ width: '100vw', height: '100vh', position: 'relative', overflow: 'hidden' }}>
-                            <AnimatePresence>
-                                {tasks.map(task => (
-                                    <SoapBubbleNote key={task.id} task={task} onDelete={deleteTask} windowSize={windowSize} />
-                                ))}
-                            </AnimatePresence>
-                        </div>
-                    ) : (
-                        <div className="list-container">
-                            <AnimatePresence>
-                                {tasks.map(task => (
-                                    <div key={task.id} className="sticky-note" style={{ backgroundColor: '#fff9c4' }}>
-                                        <div className="note-text">{task.text}</div>
-                                        <button className="delete-x visible" onClick={() => deleteTask(task.id)}>×</button>
-                                    </div>
-                                ))}
-                            </AnimatePresence>
-                        </div>
-                    )}
+
+                    <div className={viewMode === 'list' ? 'list-container' : ''}>
+                        {tasks.map(task => (
+                            <SoapBubbleNote
+                                key={task.id}
+                                task={task}
+                                onDelete={id => setTasks(prev => prev.filter(t => t.id !== id))}
+                                windowSize={windowSize}
+                                isListMode={viewMode === 'list'}
+                            />
+                        ))}
+                    </div>
                 </div>
             );
         };
 
         const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(<App />);
+
+        // モバイルのジェスチャー制限
+        document.addEventListener('touchmove', e => {
+            if (e.target.closest('.input-wrapper') || e.target.closest('.list-container')) return;
+            e.preventDefault();
+        }, { passive: false });
     </script>
 </body>
 

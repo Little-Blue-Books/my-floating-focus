@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="ja">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport"
@@ -15,12 +14,10 @@
     <link
         href="https://fonts.googleapis.com/css2?family=Kiwi+Maru:wght@400;500&family=Inter:wght@400;600;700&display=swap"
         rel="stylesheet">
-
     <!-- Frameworks -->
     <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-
     <style>
         :root {
             --canvas-bg: #ffffff;
@@ -28,7 +25,6 @@
             --note-size: 140px;
             --note-size-mobile: 115px;
         }
-
         html,
         body {
             margin: 0;
@@ -43,7 +39,6 @@
             user-select: none;
             -webkit-user-select: none;
         }
-
         #root,
         #canvas {
             width: 100vw;
@@ -52,7 +47,6 @@
             touch-action: none;
             overflow: hidden;
         }
-
         .header {
             position: fixed;
             top: env(safe-area-inset-top, 1.25rem);
@@ -60,7 +54,6 @@
             z-index: 1000;
             pointer-events: none;
         }
-
         .title {
             font-size: 0.8rem;
             font-weight: 500;
@@ -70,7 +63,6 @@
             font-family: 'Inter', sans-serif;
             text-transform: uppercase;
         }
-
         /* 入力エリア：常に最前面 */
         .input-container {
             position: fixed;
@@ -83,7 +75,6 @@
             box-sizing: border-box;
             pointer-events: none;
         }
-
         .input-wrapper {
             background: rgba(255, 255, 255, 0.98);
             backdrop-filter: blur(15px);
@@ -96,7 +87,6 @@
             border: 1px solid rgba(0, 0, 0, 0.1);
             pointer-events: auto;
         }
-
         input {
             flex: 1;
             min-width: 0;
@@ -108,7 +98,6 @@
             color: var(--text-primary);
             font-family: 'Kiwi Maru', sans-serif;
         }
-
         .add-btn {
             background: #2d3436;
             color: white;
@@ -121,7 +110,6 @@
             font-size: 0.95rem;
             touch-action: manipulation;
         }
-
         /* 付箋コンテナ：ライブラリを使わず、絶対座標で制御 */
         .note-wrapper {
             position: absolute;
@@ -133,7 +121,6 @@
             /* 拡大時のみ z-index を上げる */
             z-index: 10;
         }
-
         /* 付箋本体 */
         .sticky-note {
             position: relative;
@@ -152,42 +139,34 @@
             background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.1) 0%, rgba(0, 0, 0, 0.04) 100%);
             box-sizing: border-box;
             touch-action: none;
-
             /* アニメーション：CSS transitionに一本化 */
             transition: transform 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28), box-shadow 0.3s ease;
             transform: scale(1);
         }
-
         /* アクティブ（タップ中）のスタイル：Safariでも確実に効かせる */
         .note-wrapper.is-active {
             z-index: 1000;
         }
-
         .note-wrapper.is-active .sticky-note {
             transform: scale(1.4);
             box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15);
         }
-
         .note-wrapper.is-dragging .sticky-note {
             transition: none;
             /* ドラッグ中は追従を優先するためtransitionを切る */
         }
-
         @media (max-width: 600px) {
             .note-wrapper {
                 width: var(--note-size-mobile);
                 height: var(--note-size-mobile);
             }
-
             .note-text {
                 font-size: 0.85rem;
             }
-
             .folded-corner {
                 border-width: 12px;
             }
         }
-
         .folded-corner {
             position: absolute;
             top: 0;
@@ -199,7 +178,6 @@
             border-color: transparent white transparent transparent;
             z-index: 2;
         }
-
         /* 削除ボタンを付箋の外側に配置しやすくする */
         .delete-btn-area {
             position: absolute;
@@ -220,7 +198,6 @@
             cursor: pointer;
             touch-action: manipulation;
         }
-
         .note-text {
             font-size: 1.1rem;
             font-weight: 500;
@@ -229,14 +206,12 @@
             word-wrap: break-word;
             pointer-events: none;
         }
-
         .view-toggle {
             position: fixed;
             bottom: env(safe-area-inset-bottom, 1.5rem);
             right: 1.5rem;
             z-index: 9000;
         }
-
         .toggle-pill {
             background: white;
             border: 1px solid rgba(0, 0, 0, 0.1);
@@ -247,7 +222,6 @@
             cursor: pointer;
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
         }
-
         .list-container {
             padding: 10rem 2rem 2rem;
             display: grid;
@@ -258,7 +232,6 @@
             box-sizing: border-box;
             touch-action: pan-y;
         }
-
         /* リストモード用の付箋調整 */
         .list-container .note-wrapper {
             position: relative;
@@ -268,13 +241,10 @@
         }
     </style>
 </head>
-
 <body>
     <div id="root"></div>
-
     <script type="text/babel">
         const { useState, useEffect, useMemo, useRef, useCallback } = React;
-
         // --- Utils: LocalStorage ---
         // 旧バージョンのキーを全て削除して統一する
         const STORAGE_KEY = 'FloatingFocus_FINAL_v1';
@@ -298,7 +268,6 @@
                 return null;
             } catch (e) { return null; }
         };
-
         // --- Audio Logic: Chrome / iOS Safari 両対応 ---
         // async/await でresumeを確実に待ってから再生する
         let audioCtx = null;
@@ -326,87 +295,78 @@
                 console.warn('Audio error:', e);
             }
         };
-
         const SoapBubbleNote = ({ task, onDelete, windowSize, isListMode }) => {
-            // 位置・状態の管理
-            const [pos, setPos] = useState({ x: 0, y: 0 });
-            const [rotation, setRotation] = useState(0);
-            const [status, setStatus] = useState('floating'); // floating, dragging, active
-
-            const posRef = useRef({ x: 0, y: 0 }); // ドラッグ・アニメーション用
+            const [status, setStatus] = useState('floating');
+            const statusRef = useRef('floating');
+            const posRef = useRef({ x: 0, y: 0 });
             const dragRef = useRef({ startX: 0, startY: 0, initialX: 0, initialY: 0 });
+            const wrapperRef = useRef(null); // DOM直接操作用
+            const resumeTimerRef = useRef(null);
             const colors = ['#fff9c4', '#fce4ec', '#e3f2fd', '#f1f8e9'];
             const bgColor = useMemo(() => colors[Math.floor(Math.random() * colors.length)], []);
-
             const isMobile = windowSize.width < 600;
             const size = isMobile ? 115 : 140;
-
+            // DOM要素にtransformを書き込む（Reactのrender不要）
+            const applyTransform = (x, y, rot, scale = 1) => {
+                if (!wrapperRef.current) return;
+                wrapperRef.current.style.transform =
+                    `translate3d(${x}px, ${y}px, 0) rotate(${rot}deg) scale(${scale})`;
+            };
             // 初期位置
             useEffect(() => {
-                const x = Math.random() * (windowSize.width - size);
-                const y = Math.random() * (windowSize.height - size);
+                const x = Math.random() * Math.max(0, windowSize.width - size);
+                const y = Math.random() * Math.max(0, windowSize.height - size);
                 posRef.current = { x, y };
-                setPos({ x, y });
+                applyTransform(x, y, 0);
             }, []);
-
-            // 浮遊アニメーション
+            // 浮遊アニメーション（DOM直接操作 → Reactレンダリング不要）
             useEffect(() => {
-                if (isListMode || status !== 'floating') return;
-
+                if (isListMode || statusRef.current !== 'floating') return;
                 let raf;
-                // 各ノートごとに少しずつ異なる速度・位相を持たせる
-                const speedFactor = 0.7 + Math.random() * 0.6; // 0.7〜1.3 の個体差
-                let target = { x: Math.random() * (windowSize.width - size), y: Math.random() * (windowSize.height - size) };
+                const speedFactor = 0.7 + Math.random() * 0.6;
+                let target = {
+                    x: Math.random() * Math.max(0, windowSize.width - size),
+                    y: Math.random() * Math.max(0, windowSize.height - size)
+                };
                 let startTime = performance.now();
-                const duration = (4000 + Math.random() * 3000) / speedFactor; // 3〜7秒でそれぞれ違う速さ
-                const startPos = { ...posRef.current };
-
+                const duration = (4000 + Math.random() * 3000) / speedFactor;
+                let startPos = { ...posRef.current };
                 const step = (time) => {
-                    if (status !== 'floating') return;
+                    if (statusRef.current !== 'floating') return;
                     const elapsed = time - startTime;
                     const progress = Math.min(elapsed / duration, 1);
-
-                    // easeInOut
-                    const ease = progress < 0.5 ? 2 * progress * progress : 1 - Math.pow(-2 * progress + 2, 2) / 2;
-
-                    // サイン波を混ぜてふわふわ感を追加（上下方向に少し揺れる）
-                    const wobbleX = Math.sin(elapsed / 900 + startPos.x) * 8;
-                    const wobbleY = Math.cos(elapsed / 1100 + startPos.y) * 8;
-
-                    posRef.current = {
-                        x: Math.min(Math.max(0, startPos.x + (target.x - startPos.x) * ease + wobbleX), windowSize.width - size),
-                        y: Math.min(Math.max(0, startPos.y + (target.y - startPos.y) * ease + wobbleY), windowSize.height - size)
-                    };
-                    setPos({ ...posRef.current });
-                    setRotation(Math.sin(elapsed / 1200) * 6); // ±6度で揺れる
-
+                    const ease = progress < 0.5
+                        ? 2 * progress * progress
+                        : 1 - Math.pow(-2 * progress + 2, 2) / 2;
+                    const wobbleX = Math.sin(elapsed / 900 + startPos.x * 0.01) * 8;
+                    const wobbleY = Math.cos(elapsed / 1100 + startPos.y * 0.01) * 8;
+                    const x = Math.min(Math.max(0, startPos.x + (target.x - startPos.x) * ease + wobbleX), windowSize.width - size);
+                    const y = Math.min(Math.max(0, startPos.y + (target.y - startPos.y) * ease + wobbleY), windowSize.height - size);
+                    const rot = Math.sin(elapsed / 1200) * 6;
+                    posRef.current = { x, y };
+                    applyTransform(x, y, rot); // DOM直接更新
                     if (progress < 1) {
                         raf = requestAnimationFrame(step);
                     } else {
-                        // 次の目的地へ（全エリアからランダムに選ぶ）
                         startTime = performance.now();
-                        target = { x: Math.random() * (windowSize.width - size), y: Math.random() * (windowSize.height - size) };
-                        startPos.x = posRef.current.x;
-                        startPos.y = posRef.current.y;
+                        target = {
+                            x: Math.random() * Math.max(0, windowSize.width - size),
+                            y: Math.random() * Math.max(0, windowSize.height - size)
+                        };
+                        startPos = { ...posRef.current };
                         raf = requestAnimationFrame(step);
                     }
                 };
-
                 raf = requestAnimationFrame(step);
                 return () => cancelAnimationFrame(raf);
             }, [status, isListMode, windowSize, size]);
-
-
-            const statusRef = useRef('floating');
-            const resumeTimerRef = useRef(null);
-
-            // ドラッグ実装
+            // ドラッグ実装（こちらもDOM直接操作）
             const handlePointerDown = (e) => {
                 if (e.target.closest('.delete-btn-area')) return;
-                // 復帰タイマーをクリア
                 if (resumeTimerRef.current) clearTimeout(resumeTimerRef.current);
                 statusRef.current = 'active';
                 setStatus('active');
+                if (wrapperRef.current) wrapperRef.current.style.zIndex = '1000';
                 dragRef.current = {
                     startX: e.clientX,
                     startY: e.clientY,
@@ -416,42 +376,39 @@
                 window.addEventListener('pointermove', handlePointerMove);
                 window.addEventListener('pointerup', handlePointerUp);
             };
-
             const handlePointerMove = (e) => {
                 if (statusRef.current === 'floating') return;
                 statusRef.current = 'dragging';
-                setStatus('dragging');
                 const dx = e.clientX - dragRef.current.startX;
                 const dy = e.clientY - dragRef.current.startY;
-
-                posRef.current = {
-                    x: Math.min(Math.max(0, dragRef.current.initialX + dx), windowSize.width - size),
-                    y: Math.min(Math.max(0, dragRef.current.initialY + dy), windowSize.height - size)
-                };
-                setPos({ ...posRef.current });
+                const x = Math.min(Math.max(0, dragRef.current.initialX + dx), windowSize.width - size);
+                const y = Math.min(Math.max(0, dragRef.current.initialY + dy), windowSize.height - size);
+                posRef.current = { x, y };
+                applyTransform(x, y, 0, 1.3); // ドラッグ中は少し大きく
             };
-
             const handlePointerUp = () => {
                 window.removeEventListener('pointermove', handlePointerMove);
                 window.removeEventListener('pointerup', handlePointerUp);
-                // タップ後、2秒間はアクティブ状態（大きい）を維持してから浮遊再開
+                // 手放してから2秒間は拡大状態をキープ
                 statusRef.current = 'held';
-                setStatus('active'); // is-active クラスを維持
+                if (wrapperRef.current) {
+                    // is-activeクラスを付けてCSSでscale(1.4)を効かせる
+                    wrapperRef.current.classList.add('is-active');
+                }
                 if (resumeTimerRef.current) clearTimeout(resumeTimerRef.current);
                 resumeTimerRef.current = setTimeout(() => {
                     statusRef.current = 'floating';
-                    setStatus('floating');
+                    setStatus('floating'); // ← 浮遊ループ再開のためだけにsetStatusを使う
+                    if (wrapperRef.current) {
+                        wrapperRef.current.classList.remove('is-active');
+                        wrapperRef.current.style.zIndex = '10';
+                    }
                 }, 2000);
             };
-
-            const wrapperStyle = isListMode ? {} : {
-                transform: `translate3d(${pos.x}px, ${pos.y}px, 0) rotate(${rotation}deg)`
-            };
-
             return (
                 <div
-                    className={`note-wrapper ${status !== 'floating' ? 'is-active' : ''} ${status === 'dragging' ? 'is-dragging' : ''}`}
-                    style={wrapperStyle}
+                    ref={wrapperRef}
+                    className={`note-wrapper ${status !== 'floating' ? 'is-active' : ''}`}
                     onPointerDown={isListMode ? null : handlePointerDown}
                 >
                     <div className="sticky-note" style={{ backgroundColor: bgColor }}>
@@ -465,7 +422,6 @@
                 </div>
             );
         };
-
         const App = () => {
             const [tasks, setTasks] = useState(() => {
                 const saved = loadTasks();
@@ -474,27 +430,22 @@
                     { id: 2, text: "少し歩いてみる" }
                 ];
             });
-
             const [inputValue, setInputValue] = useState("");
             const [viewMode, setViewMode] = useState("float");
             const [windowSize, setWindowSize] = useState({ width: window.innerWidth, height: window.innerHeight });
-
             useEffect(() => {
                 saveTasks(tasks);
             }, [tasks]);
-
             useEffect(() => {
                 const update = () => setWindowSize({ width: window.innerWidth, height: window.innerHeight });
                 window.addEventListener('resize', update);
                 return () => window.removeEventListener('resize', update);
             }, []);
-
             const addTask = () => {
                 if (!inputValue.trim()) return;
                 setTasks(prev => [...prev, { id: Date.now(), text: inputValue.trim() }]);
                 setInputValue("");
             };
-
             return (
                 <div id="canvas">
                     <header className="header"><div className="title">Floating Focus</div></header>
@@ -509,13 +460,11 @@
                             <button className="add-btn" onClick={addTask}>Add</button>
                         </div>
                     </div>
-
                     <div className="view-toggle">
                         <button className="toggle-pill" onClick={() => setViewMode(viewMode === 'float' ? 'list' : 'float')}>
                             {viewMode === 'float' ? 'リストで整える' : '浮かべて眺める'}
                         </button>
                     </div>
-
                     <div className={viewMode === 'list' ? 'list-container' : ''}>
                         {tasks.map(task => (
                             <SoapBubbleNote
@@ -530,10 +479,8 @@
                 </div>
             );
         };
-
         const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(<App />);
-
         // モバイルのジェスチャー制限
         document.addEventListener('touchmove', e => {
             if (e.target.closest('.input-wrapper') || e.target.closest('.list-container')) return;
@@ -541,5 +488,4 @@
         }, { passive: false });
     </script>
 </body>
-
 </html>

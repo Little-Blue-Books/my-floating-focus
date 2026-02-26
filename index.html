@@ -85,7 +85,6 @@
             left: 50%;
             transform: translateX(-50%);
             z-index: 1001;
-            /* ヘッダーより上に */
             width: calc(100% - 2rem);
             max-width: 480px;
             box-sizing: border-box;
@@ -103,17 +102,14 @@
             border: 1px solid rgba(0, 0, 0, 0.05);
             pointer-events: auto;
             overflow: hidden;
-            /* はみ出し防止 */
         }
 
         input {
             flex: 1;
             min-width: 0;
-            /* Flex-shrinkを有効にするために必須 */
             border: none;
             padding: 0.6rem 0.8rem;
             font-size: 16px;
-            /* iOS自動ズーム防止 */
             outline: none;
             background: transparent;
             color: var(--text-primary);
@@ -123,7 +119,6 @@
 
         .add-btn {
             flex-shrink: 0;
-            /* ボタンは縮ませない */
             background: #2d3436;
             color: white;
             border: none;
@@ -172,8 +167,6 @@
             .title {
                 display: none;
             }
-
-            /* 極端に狭い時はタイトルを隠す */
         }
 
         @media (max-width: 600px) {
@@ -235,19 +228,19 @@
             bottom: -5px;
             right: -5px;
             background: white;
-            /* 重なりで見やすく */
             border-radius: 50%;
             border: 1px solid rgba(0, 0, 0, 0.1);
             color: rgba(0, 0, 0, 0.4);
             cursor: pointer;
             font-size: 1.5rem;
-            width: 40px;
-            height: 40px;
+            width: 44px;
+            /* タップしやすく少し大きく */
+            height: 44px;
             display: flex;
             align-items: center;
             justify-content: center;
-            z-index: 10;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            z-index: 100;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
             touch-action: manipulation;
             -webkit-tap-highlight-color: transparent;
         }
@@ -273,7 +266,7 @@
         }
 
         .list-container {
-            padding: 8rem 2rem 2rem;
+            padding: 8.5rem 2rem 2rem;
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
             gap: 2rem;
@@ -327,12 +320,11 @@
         const MOBILE_NOTE_SIZE = 100;
 
         const SoapBubbleNote = ({ task, onDelete, windowSize }) => {
-            const [status, setStatus] = useState('floating');
-            const statusRef = useRef('floating');
+            const [isFloating, setIsFloating] = useState(true);
+            const isFloatingRef = useRef(true);
 
             const x = FramerMotionLib.useMotionValue(0);
             const y = FramerMotionLib.useMotionValue(0);
-            const scale = FramerMotionLib.useMotionValue(1);
             const rotate = FramerMotionLib.useMotionValue(0);
 
             const colors = ['#fff9c4', '#fce4ec', '#e3f2fd', '#f1f8e9'];
@@ -343,10 +335,21 @@
 
             const clampPos = (val, max) => Math.min(Math.max(0, val), Math.max(0, max - currentNoteSize));
 
+            // 移動先：現在の位置から遠い quadrant を選ぶ
             const getRandomPos = () => {
                 const maxX = Math.max(0, windowSize.width - currentNoteSize);
                 const maxY = Math.max(0, windowSize.height - currentNoteSize);
-                return { x: Math.random() * maxX, y: Math.random() * maxY };
+                const curX = x.get();
+                const curY = y.get();
+
+                // 現在の quadrant の反対側を優先
+                const preferLeft = curX > maxX / 2;
+                const preferTop = curY > maxY / 2;
+
+                const targetX = preferLeft ? Math.random() * (maxX * 0.45) : (maxX * 0.55) + Math.random() * (maxX * 0.45);
+                const targetY = preferTop ? Math.random() * (maxY * 0.45) : (maxY * 0.55) + Math.random() * (maxY * 0.45);
+
+                return { x: targetX, y: targetY };
             };
 
             const isFirstMount = useRef(true);
@@ -358,28 +361,38 @@
                 }
             }, []);
 
+            // 画面サイズ変更時：範囲外に出たときだけ補正
             useEffect(() => {
-                x.set(clampPos(x.get(), windowSize.width));
-                y.set(clampPos(y.get(), windowSize.height));
+                const curX = x.get();
+                const curY = y.get();
+                if (curX > windowSize.width - currentNoteSize || curY > windowSize.height - currentNoteSize) {
+                    x.set(clampPos(curX, windowSize.width));
+                    y.set(clampPos(curY, windowSize.height));
+                }
             }, [windowSize]);
 
             useEffect(() => {
-                if (status !== 'floating') return;
+                if (!isFloating) return;
+
                 let stopRequested = false;
                 const runLoop = () => {
-                    if (stopRequested || statusRef.current !== 'floating') return;
+                    if (stopRequested || !isFloatingRef.current) return;
                     const target = getRandomPos();
-                    const duration = 7 + Math.random() * 5;
+                    const duration = 8 + Math.random() * 6; // 少しゆっくりめに
+
                     const animX = FramerMotionLib.animate(x, target.x, { duration, ease: "easeInOut" });
-                    const animY = FramerMotionLib.animate(y, target.y, { duration: duration * 1.1, ease: "easeInOut" });
+                    const animY = FramerMotionLib.animate(y, target.y, { duration: duration * (0.9 + Math.random() * 0.2), ease: "easeInOut" });
+
                     Promise.all([animX, animY]).then(() => { if (!stopRequested) runLoop(); });
                 };
-                const animRotate = FramerMotionLib.animate(rotate, [-5, 5, -5], {
-                    duration: 4, repeat: Infinity, ease: "easeInOut"
+
+                const animRotate = FramerMotionLib.animate(rotate, [-6, 6, -6], {
+                    duration: 5, repeat: Infinity, ease: "easeInOut"
                 });
+
                 runLoop();
                 return () => { stopRequested = true; animRotate.stop(); };
-            }, [windowSize, status]);
+            }, [windowSize, isFloating]);
 
             return (
                 <motion.div
@@ -393,33 +406,30 @@
                     }}
                     onPointerDown={(e) => {
                         if (e.target.closest('.delete-x')) return;
-                        statusRef.current = 'active';
-                        setStatus('active');
-                        FramerMotionLib.animate(scale, 1.3, { duration: 0.2, ease: "backOut" });
+                        setIsFloating(false);
+                        isFloatingRef.current = false;
+                        // animate でのスケール変更は行わず whileTap/whileDrag に任せる
                     }}
                     onPointerUp={() => {
-                        if (statusRef.current !== 'active') return;
-                        statusRef.current = 'floating';
-                        setStatus('floating');
-                        FramerMotionLib.animate(scale, 1, { duration: 0.4, ease: "easeOut" });
+                        setIsFloating(true);
+                        isFloatingRef.current = true;
                     }}
                     onDragStart={() => {
-                        statusRef.current = 'active';
-                        setStatus('active');
-                        FramerMotionLib.animate(scale, 1.3, { duration: 0.15, ease: "backOut" });
+                        setIsFloating(false);
+                        isFloatingRef.current = false;
                     }}
                     onDragEnd={() => {
-                        statusRef.current = 'floating';
-                        setStatus('floating');
-                        FramerMotionLib.animate(scale, 1, { duration: 0.4, ease: "easeOut" });
+                        setIsFloating(true);
+                        isFloatingRef.current = true;
                     }}
+                    whileTap={{ scale: 1.35, zIndex: 100 }}
+                    whileDrag={{ scale: 1.35, zIndex: 100 }}
                     initial={{ opacity: 0, scale: 0.5 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    exit={{ scale: 1.5, opacity: 0, filter: 'blur(10px)' }}
+                    exit={{ scale: 1.6, opacity: 0, filter: 'blur(10px)', transition: { duration: 0.2 } }}
                     style={{
                         position: 'absolute',
-                        top: 0, left: 0, x, y, scale, rotate,
-                        zIndex: status === 'active' ? 100 : 10,
+                        top: 0, left: 0, x, y, rotate,
                         touchAction: 'none'
                     }}
                 >
@@ -440,14 +450,10 @@
         };
 
         const App = () => {
-            // ステートの初期化時に一度だけLocalStorageを読み込む
             const [tasks, setTasks] = useState(() => {
                 try {
-                    const saved = localStorage.getItem('floating_tasks_v2');
-                    if (saved) {
-                        const parsed = JSON.parse(saved);
-                        if (Array.isArray(parsed)) return parsed;
-                    }
+                    const saved = localStorage.getItem('floating_tasks_v3');
+                    if (saved) return JSON.parse(saved);
                 } catch (e) { }
                 return [
                     { id: 1, text: "深呼吸をしてみる" },
@@ -459,10 +465,9 @@
             const [viewMode, setViewMode] = useState("float");
             const [windowSize, setWindowSize] = useState({ width: window.innerWidth, height: window.innerHeight });
 
-            // タスクが変更されるたびにLocalStorageに保存
             useEffect(() => {
                 try {
-                    localStorage.setItem('floating_tasks_v2', JSON.stringify(tasks));
+                    localStorage.setItem('floating_tasks_v3', JSON.stringify(tasks));
                 } catch (e) { }
             }, [tasks]);
 
@@ -476,7 +481,8 @@
                 if (window.visualViewport) window.visualViewport.addEventListener('resize', updateSize);
 
                 const preventDefault = (e) => {
-                    if (e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON' || e.target.closest('.add-btn') || e.target.closest('.delete-x') || e.target.closest('.toggle-pill')) return;
+                    const t = e.target;
+                    if (t.tagName === 'INPUT' || t.tagName === 'BUTTON' || t.closest('.input-wrapper') || t.closest('.delete-x') || t.closest('.view-toggle')) return;
                     if (e.cancelable) e.preventDefault();
                 };
                 document.addEventListener('touchmove', preventDefault, { passive: false });
@@ -542,9 +548,9 @@
                         <div className="list-container">
                             <AnimatePresence>
                                 {tasks.map(task => (
-                                    <div key={task.id} className="sticky-note" style={{ backgroundColor: '#fff9c4' }}>
+                                    <div key={task.id} className="sticky-note" style={{ backgroundColor: '#fff9c4', position: 'relative' }}>
                                         <div className="note-text">{task.text}</div>
-                                        <div className="delete-x" style={{ opacity: 1 }} onPointerDown={() => { playPopSound(); deleteTask(task.id); }}>×</div>
+                                        <div className="delete-x" style={{ opacity: 1, bottom: '5px', right: '5px' }} onPointerDown={(e) => { e.stopPropagation(); playPopSound(); deleteTask(task.id); }}>×</div>
                                     </div>
                                 ))}
                             </AnimatePresence>

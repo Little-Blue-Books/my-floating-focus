@@ -3,7 +3,8 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Floating Focus | Seamless Canvas</title>
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -71,23 +72,22 @@
         }
 
         .title {
-            font-size: 0.9rem;
+            font-size: 0.8rem;
             font-weight: 500;
             color: var(--text-primary);
-            opacity: 0.4;
+            opacity: 0.3;
             letter-spacing: 1px;
             font-family: 'Inter', sans-serif;
         }
 
         .input-container {
             position: fixed;
-            top: env(safe-area-inset-top, 1.25rem);
+            top: env(safe-area-inset-top, 1rem);
             left: 50%;
             transform: translateX(-50%);
             z-index: 1000;
-            width: 100%;
-            max-width: 440px;
-            padding: 0 1rem;
+            width: 90%;
+            max-width: 500px;
             box-sizing: border-box;
             touch-action: pan-x pan-y;
         }
@@ -95,37 +95,42 @@
         .input-wrapper {
             background: white;
             display: flex;
-            gap: 0.5rem;
+            gap: 0.4rem;
             padding: 0.4rem;
             border-radius: 12px;
-            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.04);
-            border: 1px solid rgba(0, 0, 0, 0.03);
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.06);
+            border: 1px solid rgba(0, 0, 0, 0.05);
             pointer-events: auto;
         }
 
         input {
             flex: 1;
             border: none;
-            padding: 0.6rem 1rem;
-            font-size: 16px; /* iOSの自動ズーム防止 */
+            padding: 0.5rem 0.6rem;
+            font-size: 16px;
+            /* iOSの自動ズーム防止 */
             outline: none;
             background: transparent;
             color: var(--text-primary);
             font-family: 'Kiwi Maru', sans-serif;
             touch-action: manipulation;
+            min-width: 0;
+            /* フレックスアイテムの縮小を許可 */
         }
 
         .add-btn {
             background: #2d3436;
             color: white;
             border: none;
-            padding: 0 1.25rem;
-            border-radius: 10px;
+            padding: 0 0.8rem;
+            border-radius: 9px;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.2s;
             font-family: 'Inter', sans-serif;
             touch-action: manipulation;
+            white-space: nowrap;
+            flex-shrink: 0;
         }
 
         .sticky-note {
@@ -148,15 +153,34 @@
         }
 
         @media (max-width: 600px) {
+            .input-container {
+                width: 85%;
+                /* 左右に余白を確保してAddボタンを見やすく */
+            }
+
             .sticky-note {
                 width: 100px;
                 height: 100px;
                 padding: 0.6rem;
             }
-            .note-text { font-size: 0.75rem; }
-            .input-container { width: 90%; max-width: none; }
-            .folded-corner { border-width: 0 12px 12px 0; }
-            .sticky-note::before { width: 12px; height: 12px; }
+
+            .note-text {
+                font-size: 0.75rem;
+            }
+
+            .folded-corner {
+                border-width: 0 12px 12px 0;
+            }
+
+            .sticky-note::before {
+                width: 12px;
+                height: 12px;
+            }
+
+            .header {
+                top: env(safe-area-inset-top, 0.5rem);
+                left: 0.5rem;
+            }
         }
 
         .folded-corner {
@@ -212,9 +236,19 @@
             touch-action: manipulation;
         }
 
-        .delete-x.visible { opacity: 1; color: rgba(0, 0, 0, 0.5); }
-        .sticky-note:hover .delete-x { opacity: 1; }
-        .delete-x:hover { color: #ff7675; transform: scale(1.2); }
+        .delete-x.visible {
+            opacity: 1;
+            color: rgba(0, 0, 0, 0.5);
+        }
+
+        .sticky-note:hover .delete-x {
+            opacity: 1;
+        }
+
+        .delete-x:hover {
+            color: #ff7675;
+            transform: scale(1.2);
+        }
 
         .view-toggle {
             position: fixed;
@@ -340,7 +374,7 @@
                 let stopRequested = false;
                 const runLoop = () => {
                     if (stopRequested || statusRef.current !== 'floating') return;
-                    
+
                     const target = getRandomPos();
                     const duration = 6 + Math.random() * 4;
 
@@ -349,7 +383,7 @@
 
                     Promise.all([animX, animY]).then(() => {
                         if (!stopRequested) runLoop();
-                    }).catch(() => {});
+                    }).catch(() => { });
                 };
 
                 const animRotate = FramerMotionLib.animate(rotate, [-5, 5, -5], {
@@ -389,6 +423,10 @@
                     }}
                     onPointerDown={handleDown}
                     onPointerUp={handleRelease}
+                    onDragStart={() => {
+                        setStatus('active');
+                        statusRef.current = 'active';
+                    }}
                     onDragEnd={handleRelease}
                     initial={{ opacity: 0, scale: 0.5 }}
                     animate={{ opacity: 1, scale: 1 }}
@@ -420,16 +458,34 @@
         };
 
         const App = () => {
-            const [tasks, setTasks] = useState([
-                { id: 1, text: "深呼吸をしてみる" },
-                { id: 2, text: "少し歩いてみる" }
-            ]);
+            // LocalStorageからデータを読み込む
+            const loadTasks = () => {
+                const saved = localStorage.getItem('floating_tasks');
+                if (saved) {
+                    try {
+                        return JSON.parse(saved);
+                    } catch (e) {
+                        console.error("Failed to parse tasks", e);
+                    }
+                }
+                return [
+                    { id: 1, text: "深呼吸をしてみる" },
+                    { id: 2, text: "少し歩いてみる" }
+                ];
+            };
+
+            const [tasks, setTasks] = useState(loadTasks);
             const [inputValue, setInputValue] = useState("");
             const [viewMode, setViewMode] = useState("float");
-            const [windowSize, setWindowSize] = useState({ 
-                width: window.innerWidth, 
-                height: window.innerHeight 
+            const [windowSize, setWindowSize] = useState({
+                width: window.innerWidth,
+                height: window.innerHeight
             });
+
+            // タスクが変更されるたびにLocalStorageに保存
+            useEffect(() => {
+                localStorage.setItem('floating_tasks', JSON.stringify(tasks));
+            }, [tasks]);
 
             useEffect(() => {
                 const updateSize = () => {
@@ -481,7 +537,7 @@
             return (
                 <div id="canvas">
                     <header className="header"><div className="title">FLOATING FOCUS</div></header>
-                    
+
                     <div className="input-container">
                         <div className="input-wrapper">
                             <input

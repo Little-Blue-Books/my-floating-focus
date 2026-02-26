@@ -16,6 +16,7 @@
         href="https://fonts.googleapis.com/css2?family=Kiwi+Maru:wght@400;500&family=Inter:wght@400;600;700&display=swap"
         rel="stylesheet">
 
+    <!-- Frameworks -->
     <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -40,25 +41,18 @@
             position: fixed;
             background-color: var(--canvas-bg);
             font-family: 'Kiwi Maru', sans-serif;
-            -webkit-overflow-scrolling: touch;
             touch-action: none;
             user-select: none;
             -webkit-user-select: none;
         }
 
-        #root {
+        #root,
+        #canvas {
             width: 100vw;
             height: 100vh;
             position: relative;
             touch-action: none;
-        }
-
-        #canvas {
-            width: 100%;
-            height: 100%;
             overflow: hidden;
-            position: relative;
-            touch-action: none;
         }
 
         .header {
@@ -70,38 +64,39 @@
         }
 
         .title {
-            font-size: 0.75rem;
+            font-size: 0.7rem;
             font-weight: 500;
             color: var(--text-primary);
-            opacity: 0.3;
+            opacity: 0.25;
             letter-spacing: 1px;
             font-family: 'Inter', sans-serif;
-            white-space: nowrap;
         }
 
+        /* 入力エリア：画面端に寄りすぎないよう調整 */
         .input-container {
             position: fixed;
             top: env(safe-area-inset-top, 1rem);
             left: 50%;
             transform: translateX(-50%);
-            z-index: 1001;
-            width: calc(100% - 2rem);
+            z-index: 5000;
+            /* 最前面を確実に保証 */
+            width: 94%;
             max-width: 480px;
             box-sizing: border-box;
-            touch-action: pan-x pan-y;
+            pointer-events: none;
         }
 
         .input-wrapper {
-            background: white;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
             display: flex;
             align-items: center;
-            gap: 0.3rem;
-            padding: 0.3rem;
-            border-radius: 14px;
-            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.06);
-            border: 1px solid rgba(0, 0, 0, 0.05);
+            gap: 0.4rem;
+            padding: 0.4rem;
+            border-radius: 16px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(0, 0, 0, 0.08);
             pointer-events: auto;
-            overflow: hidden;
         }
 
         input {
@@ -122,14 +117,18 @@
             background: #2d3436;
             color: white;
             border: none;
-            padding: 0.6rem 1rem;
-            border-radius: 10px;
+            padding: 0.6rem 1.1rem;
+            border-radius: 12px;
             font-weight: 600;
             cursor: pointer;
-            transition: all 0.2s;
+            transition: transform 0.2s, background 0.2s;
             font-family: 'Inter', sans-serif;
             touch-action: manipulation;
             font-size: 0.9rem;
+        }
+
+        .add-btn:active {
+            transform: scale(0.95);
         }
 
         .sticky-note {
@@ -143,52 +142,40 @@
             justify-content: center;
             align-items: center;
             text-align: center;
-            cursor: grab;
             border-radius: 2px;
             background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.1) 0%, rgba(0, 0, 0, 0.02) 100%);
             touch-action: none;
             box-sizing: border-box;
             -webkit-tap-highlight-color: transparent;
-            /* タップ時の青い枠を消す */
+            /* SafariでJSが追いつかない時のためのCSS transition */
+            transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+            will-change: transform;
         }
 
-        @media (max-width: 400px) {
-            .input-container {
-                width: calc(100% - 1rem);
-            }
-
-            .add-btn {
-                padding: 0.6rem 0.8rem;
-                font-size: 0.85rem;
-            }
-
-            input {
-                padding: 0.6rem 0.5rem;
-            }
-
-            .title {
-                display: none;
-            }
+        /* アクティブ時のスケールをCSSでも強制 */
+        .sticky-note.is-active {
+            transform: scale(1.4) !important;
+            z-index: 1000 !important;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15) !important;
         }
 
-        @media (max-width: 600px) {
+        @media (max-width: 500px) {
             .sticky-note {
-                width: 100px;
-                height: 100px;
+                width: 105px;
+                height: 105px;
                 padding: 0.6rem;
             }
 
             .note-text {
-                font-size: 0.75rem;
+                font-size: 0.8rem;
             }
 
             .folded-corner {
                 border-width: 0 12px 12px 0;
             }
 
-            .sticky-note::before {
-                width: 12px;
-                height: 12px;
+            .add-btn {
+                padding: 0.6rem 0.9rem;
             }
         }
 
@@ -223,51 +210,51 @@
             color: var(--text-primary);
             word-wrap: break-word;
             max-width: 100%;
+            pointer-events: none;
         }
 
         .delete-x {
             position: absolute;
-            bottom: -5px;
-            right: -5px;
+            bottom: -8px;
+            right: -8px;
             background: white;
             border-radius: 50%;
             border: 1px solid rgba(0, 0, 0, 0.1);
-            color: rgba(0, 0, 0, 0.4);
+            color: rgba(0, 0, 0, 0.5);
             cursor: pointer;
-            font-size: 1.5rem;
+            font-size: 1.6rem;
             width: 44px;
             height: 44px;
             display: flex;
             align-items: center;
             justify-content: center;
-            z-index: 100;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+            z-index: 110;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
             touch-action: manipulation;
-            -webkit-tap-highlight-color: transparent;
         }
 
         .view-toggle {
             position: fixed;
             bottom: env(safe-area-inset-bottom, 1.5rem);
             right: 1.5rem;
-            z-index: 1000;
+            z-index: 4000;
             touch-action: manipulation;
         }
 
         .toggle-pill {
             background: white;
-            border: 1px solid rgba(0, 0, 0, 0.05);
-            padding: 0.6rem 1.2rem;
-            border-radius: 24px;
+            border: 1px solid rgba(0, 0, 0, 0.08);
+            padding: 0.75rem 1.5rem;
+            border-radius: 30px;
             font-size: 0.85rem;
             color: var(--text-primary);
             cursor: pointer;
             font-family: 'Inter', sans-serif;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.06);
         }
 
         .list-container {
-            padding: 8.5rem 2rem 2rem;
+            padding: 9rem 2rem 2rem;
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
             gap: 2rem;
@@ -284,7 +271,7 @@
 
     <script type="text/babel">
         const FramerMotionLib = window.FramerMotion || window.Motion;
-        const { useState, useEffect, useMemo, useRef } = React;
+        const { useState, useEffect, useMemo, useRef, useCallback } = React;
         const { motion, AnimatePresence } = FramerMotionLib;
 
         // --- Audio Logic ---
@@ -299,7 +286,7 @@
 
         const playPopSound = () => {
             try {
-                if (!audioCtx) initAudio();
+                initAudio();
                 if (!audioCtx) return;
                 if (audioCtx.state === "suspended") audioCtx.resume();
                 const context = audioCtx;
@@ -318,26 +305,25 @@
         };
 
         const NOTE_SIZE = 130;
-        const MOBILE_NOTE_SIZE = 100;
+        const MOBILE_NOTE_SIZE = 105;
 
         const SoapBubbleNote = ({ task, onDelete, windowSize }) => {
-            const [isFloating, setIsFloating] = useState(true);
-            const isFloatingRef = useRef(true);
+            const [isActive, setIsActive] = useState(false);
+            const activeRef = useRef(false);
 
             const x = FramerMotionLib.useMotionValue(0);
             const y = FramerMotionLib.useMotionValue(0);
-            const scale = FramerMotionLib.useMotionValue(1); // 手動スケール制御
             const rotate = FramerMotionLib.useMotionValue(0);
 
             const colors = ['#fff9c4', '#fce4ec', '#e3f2fd', '#f1f8e9'];
             const bgColor = useMemo(() => colors[Math.floor(Math.random() * colors.length)], []);
 
-            const isMobile = windowSize.width < 600;
+            const isMobile = windowSize.width < 500;
             const currentNoteSize = isMobile ? MOBILE_NOTE_SIZE : NOTE_SIZE;
 
             const clampPos = (val, max) => Math.min(Math.max(0, val), Math.max(0, max - currentNoteSize));
 
-            const getRandomPos = () => {
+            const getRandomPos = useCallback(() => {
                 const maxX = Math.max(0, windowSize.width - currentNoteSize);
                 const maxY = Math.max(0, windowSize.height - currentNoteSize);
                 const curX = x.get();
@@ -350,61 +336,52 @@
                 const targetY = preferTop ? Math.random() * (maxY * 0.4) : (maxY * 0.6) + Math.random() * (maxY * 0.4);
 
                 return { x: targetX, y: targetY };
-            };
+            }, [windowSize, currentNoteSize, x, y]);
 
-            const isFirstMount = useRef(true);
             useEffect(() => {
-                if (isFirstMount.current) {
-                    x.set(Math.random() * Math.max(0, windowSize.width - currentNoteSize));
-                    y.set(Math.random() * Math.max(0, windowSize.height - currentNoteSize));
-                    isFirstMount.current = false;
-                }
+                x.set(Math.random() * Math.max(0, windowSize.width - currentNoteSize));
+                y.set(Math.random() * Math.max(0, windowSize.height - currentNoteSize));
             }, []);
 
             useEffect(() => {
-                const curX = x.get();
-                const curY = y.get();
-                if (curX > windowSize.width - currentNoteSize || curY > windowSize.height - currentNoteSize) {
-                    x.set(clampPos(curX, windowSize.width));
-                    y.set(clampPos(curY, windowSize.height));
-                }
-            }, [windowSize]);
-
-            useEffect(() => {
-                if (!isFloating) return;
+                if (activeRef.current) return;
 
                 let stopRequested = false;
+                let controlsX, controlsY, controlsRotate;
+
                 const runLoop = () => {
-                    if (stopRequested || !isFloatingRef.current) return;
+                    if (stopRequested || activeRef.current) return;
                     const target = getRandomPos();
-                    const duration = 7 + Math.random() * 5;
+                    const duration = 12 + Math.random() * 8; // 更にゆったりと
 
-                    const animX = FramerMotionLib.animate(x, target.x, { duration, ease: "easeInOut" });
-                    const animY = FramerMotionLib.animate(y, target.y, { duration: duration * (0.9 + Math.random() * 0.2), ease: "easeInOut" });
+                    controlsX = FramerMotionLib.animate(x, target.x, { duration, ease: "easeInOut" });
+                    controlsY = FramerMotionLib.animate(y, target.y, { duration: duration * 1.1, ease: "easeInOut" });
 
-                    Promise.all([animX, animY]).then(() => { if (!stopRequested) runLoop(); });
+                    Promise.all([controlsX, controlsY]).then(() => { if (!stopRequested) runLoop(); });
                 };
 
-                const animRotate = FramerMotionLib.animate(rotate, [-6, 6, -6], {
-                    duration: 5, repeat: Infinity, ease: "easeInOut"
+                controlsRotate = FramerMotionLib.animate(rotate, [-5, 5, -5], {
+                    duration: 7, repeat: Infinity, ease: "easeInOut"
                 });
 
                 runLoop();
-                return () => { stopRequested = true; animRotate.stop(); };
-            }, [windowSize, isFloating]);
+                return () => {
+                    stopRequested = true;
+                    if (controlsX) controlsX.stop();
+                    if (controlsY) controlsY.stop();
+                    if (controlsRotate) controlsRotate.stop();
+                };
+            }, [windowSize, isActive, getRandomPos]);
 
-            const handleInteractionStart = (e) => {
+            const handleStart = (e) => {
                 if (e.target.closest('.delete-x')) return;
-                isFloatingRef.current = false;
-                setIsFloating(false);
-                FramerMotionLib.animate(scale, 1.4, { duration: 0.2, ease: "backOut" });
+                activeRef.current = true;
+                setIsActive(true);
             };
 
-            const handleInteractionEnd = () => {
-                if (isFloatingRef.current) return;
-                isFloatingRef.current = true;
-                setIsFloating(true);
-                FramerMotionLib.animate(scale, 1, { duration: 0.4, ease: "easeOut" });
+            const handleEnd = () => {
+                activeRef.current = false;
+                setIsActive(false);
             };
 
             return (
@@ -417,22 +394,25 @@
                         top: 0,
                         bottom: Math.max(0, windowSize.height - currentNoteSize)
                     }}
-                    onPointerDown={handleInteractionStart}
-                    onPointerUp={handleInteractionEnd}
-                    onPointerCancel={handleInteractionEnd}
-                    onDragStart={handleInteractionStart}
-                    onDragEnd={handleInteractionEnd}
+                    onPointerDown={handleStart}
+                    onPointerUp={handleEnd}
+                    onPointerCancel={handleEnd}
+                    onDragStart={handleStart}
+                    onDragEnd={handleEnd}
                     initial={{ opacity: 0, scale: 0.5 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ scale: 1.6, opacity: 0, filter: 'blur(10px)', transition: { duration: 0.2 } }}
+                    animate={{ opacity: 1 }}
+                    exit={{ scale: 2.0, opacity: 0, filter: 'blur(15px)', transition: { duration: 0.3 } }}
                     style={{
                         position: 'absolute',
-                        top: 0, left: 0, x, y, scale, rotate,
-                        zIndex: isFloating ? 10 : 100,
-                        touchAction: 'none'
+                        top: 0, left: 0, x, y, rotate,
+                        touchAction: 'none',
+                        zIndex: isActive ? 1000 : 10
                     }}
                 >
-                    <div className="sticky-note" style={{ backgroundColor: bgColor }}>
+                    <div
+                        className={`sticky-note ${isActive ? 'is-active' : ''}`}
+                        style={{ backgroundColor: bgColor }}
+                    >
                         <div className="folded-corner"></div>
                         <div className="note-text">{task.text}</div>
                         <div
@@ -449,10 +429,15 @@
         };
 
         const App = () => {
+            const STORAGE_KEY = 'floating_tasks_session_v1';
+
             const [tasks, setTasks] = useState(() => {
                 try {
-                    const saved = localStorage.getItem('floating_tasks_v3');
-                    if (saved) return JSON.parse(saved);
+                    const saved = localStorage.getItem(STORAGE_KEY);
+                    if (saved !== null) {
+                        const parsed = JSON.parse(saved);
+                        if (Array.isArray(parsed)) return parsed; // 空配列でも許可！
+                    }
                 } catch (e) { }
                 return [
                     { id: 1, text: "深呼吸をしてみる" },
@@ -462,12 +447,14 @@
 
             const [inputValue, setInputValue] = useState("");
             const [viewMode, setViewMode] = useState("float");
-            const [windowSize, setWindowSize] = useState({ width: window.innerWidth, height: window.innerHeight });
+            const [windowSize, setWindowSize] = useState({
+                width: window.innerWidth,
+                height: window.innerHeight
+            });
 
+            // 保存処理
             useEffect(() => {
-                try {
-                    localStorage.setItem('floating_tasks_v3', JSON.stringify(tasks));
-                } catch (e) { }
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
             }, [tasks]);
 
             useEffect(() => {
@@ -500,7 +487,7 @@
 
             const addTask = () => {
                 if (!inputValue.trim()) return;
-                setTasks(prev => [...prev, { id: Date.now(), text: inputValue }]);
+                setTasks(prev => [...prev, { id: Date.now(), text: inputValue.trim() }]);
                 setInputValue("");
                 document.activeElement.blur();
             };

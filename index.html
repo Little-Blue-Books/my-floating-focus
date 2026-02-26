@@ -148,6 +148,8 @@
             background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.1) 0%, rgba(0, 0, 0, 0.02) 100%);
             touch-action: none;
             box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+            /* タップ時の青い枠を消す */
         }
 
         @media (max-width: 400px) {
@@ -234,7 +236,6 @@
             cursor: pointer;
             font-size: 1.5rem;
             width: 44px;
-            /* タップしやすく少し大きく */
             height: 44px;
             display: flex;
             align-items: center;
@@ -325,6 +326,7 @@
 
             const x = FramerMotionLib.useMotionValue(0);
             const y = FramerMotionLib.useMotionValue(0);
+            const scale = FramerMotionLib.useMotionValue(1); // 手動スケール制御
             const rotate = FramerMotionLib.useMotionValue(0);
 
             const colors = ['#fff9c4', '#fce4ec', '#e3f2fd', '#f1f8e9'];
@@ -335,19 +337,17 @@
 
             const clampPos = (val, max) => Math.min(Math.max(0, val), Math.max(0, max - currentNoteSize));
 
-            // 移動先：現在の位置から遠い quadrant を選ぶ
             const getRandomPos = () => {
                 const maxX = Math.max(0, windowSize.width - currentNoteSize);
                 const maxY = Math.max(0, windowSize.height - currentNoteSize);
                 const curX = x.get();
                 const curY = y.get();
 
-                // 現在の quadrant の反対側を優先
                 const preferLeft = curX > maxX / 2;
                 const preferTop = curY > maxY / 2;
 
-                const targetX = preferLeft ? Math.random() * (maxX * 0.45) : (maxX * 0.55) + Math.random() * (maxX * 0.45);
-                const targetY = preferTop ? Math.random() * (maxY * 0.45) : (maxY * 0.55) + Math.random() * (maxY * 0.45);
+                const targetX = preferLeft ? Math.random() * (maxX * 0.4) : (maxX * 0.6) + Math.random() * (maxX * 0.4);
+                const targetY = preferTop ? Math.random() * (maxY * 0.4) : (maxY * 0.6) + Math.random() * (maxY * 0.4);
 
                 return { x: targetX, y: targetY };
             };
@@ -361,7 +361,6 @@
                 }
             }, []);
 
-            // 画面サイズ変更時：範囲外に出たときだけ補正
             useEffect(() => {
                 const curX = x.get();
                 const curY = y.get();
@@ -378,7 +377,7 @@
                 const runLoop = () => {
                     if (stopRequested || !isFloatingRef.current) return;
                     const target = getRandomPos();
-                    const duration = 8 + Math.random() * 6; // 少しゆっくりめに
+                    const duration = 7 + Math.random() * 5;
 
                     const animX = FramerMotionLib.animate(x, target.x, { duration, ease: "easeInOut" });
                     const animY = FramerMotionLib.animate(y, target.y, { duration: duration * (0.9 + Math.random() * 0.2), ease: "easeInOut" });
@@ -394,6 +393,20 @@
                 return () => { stopRequested = true; animRotate.stop(); };
             }, [windowSize, isFloating]);
 
+            const handleInteractionStart = (e) => {
+                if (e.target.closest('.delete-x')) return;
+                isFloatingRef.current = false;
+                setIsFloating(false);
+                FramerMotionLib.animate(scale, 1.4, { duration: 0.2, ease: "backOut" });
+            };
+
+            const handleInteractionEnd = () => {
+                if (isFloatingRef.current) return;
+                isFloatingRef.current = true;
+                setIsFloating(true);
+                FramerMotionLib.animate(scale, 1, { duration: 0.4, ease: "easeOut" });
+            };
+
             return (
                 <motion.div
                     drag
@@ -404,32 +417,18 @@
                         top: 0,
                         bottom: Math.max(0, windowSize.height - currentNoteSize)
                     }}
-                    onPointerDown={(e) => {
-                        if (e.target.closest('.delete-x')) return;
-                        setIsFloating(false);
-                        isFloatingRef.current = false;
-                        // animate でのスケール変更は行わず whileTap/whileDrag に任せる
-                    }}
-                    onPointerUp={() => {
-                        setIsFloating(true);
-                        isFloatingRef.current = true;
-                    }}
-                    onDragStart={() => {
-                        setIsFloating(false);
-                        isFloatingRef.current = false;
-                    }}
-                    onDragEnd={() => {
-                        setIsFloating(true);
-                        isFloatingRef.current = true;
-                    }}
-                    whileTap={{ scale: 1.35, zIndex: 100 }}
-                    whileDrag={{ scale: 1.35, zIndex: 100 }}
+                    onPointerDown={handleInteractionStart}
+                    onPointerUp={handleInteractionEnd}
+                    onPointerCancel={handleInteractionEnd}
+                    onDragStart={handleInteractionStart}
+                    onDragEnd={handleInteractionEnd}
                     initial={{ opacity: 0, scale: 0.5 }}
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ scale: 1.6, opacity: 0, filter: 'blur(10px)', transition: { duration: 0.2 } }}
                     style={{
                         position: 'absolute',
-                        top: 0, left: 0, x, y, rotate,
+                        top: 0, left: 0, x, y, scale, rotate,
+                        zIndex: isFloating ? 10 : 100,
                         touchAction: 'none'
                     }}
                 >

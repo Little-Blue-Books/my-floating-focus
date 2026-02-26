@@ -299,36 +299,42 @@
             } catch (e) { return null; }
         };
 
-        // --- Audio Logic: iOSではユーザー操作中に初期化必須 ---
+        // --- Audio Logic: iOS Safari対応 ---
+        // iOSではユーザーイベントの同期コード内でのみ音声が再生可能
         let audioCtx = null;
-        const initAudio = () => {
-            try {
-                if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                if (audioCtx.state === 'suspended') audioCtx.resume();
-            } catch (e) { }
-        };
+
+        // 音声コンテキストを初期化し、サウンドをすぐ鳴らす（ユーザーイベント内で呼ぶ）
         const playPop = () => {
             try {
-                initAudio();
-                if (!audioCtx || audioCtx.state !== 'running') {
-                    // まだ起動していなければ短時間後にリトライ
-                    setTimeout(playPop, 100);
-                    return;
+                // 初回の場合はUserGestureの中でコンテキストを作成する
+                if (!audioCtx) {
+                    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
                 }
-                const o = audioCtx.createOscillator();
-                const g = audioCtx.createGain();
-                o.type = "sine";
-                o.frequency.setValueAtTime(800, audioCtx.currentTime);
-                o.frequency.exponentialRampToValueAtTime(120, audioCtx.currentTime + 0.1);
-                g.gain.setValueAtTime(0.3, audioCtx.currentTime);
-                g.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
-                o.connect(g); g.connect(audioCtx.destination);
-                o.start(); o.stop(audioCtx.currentTime + 0.12);
-            } catch (e) { }
+                // ノードを作るヘルパー関数（resume後に呼ぶ）
+                const doPlay = () => {
+                    const o = audioCtx.createOscillator();
+                    const g = audioCtx.createGain();
+                    o.type = 'sine';
+                    o.frequency.setValueAtTime(800, audioCtx.currentTime);
+                    o.frequency.exponentialRampToValueAtTime(120, audioCtx.currentTime + 0.1);
+                    g.gain.setValueAtTime(0.3, audioCtx.currentTime);
+                    g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.12);
+                    o.connect(g);
+                    g.connect(audioCtx.destination);
+                    o.start(audioCtx.currentTime);
+                    o.stop(audioCtx.currentTime + 0.15);
+                };
+                // susupendedの場合はresumeしてから再生（resume自体はUserGestureの中でないと動かないため必ずここで）
+                if (audioCtx.state === 'suspended') {
+                    audioCtx.resume().then(doPlay);
+                } else {
+                    doPlay();
+                }
+            } catch (e) {
+                console.warn('Audio error:', e);
+            }
         };
-        // 最初のタッチでオーディオを起動
-        document.addEventListener('touchstart', initAudio, { once: true });
-        document.addEventListener('mousedown', initAudio, { once: true });
+
 
         const SoapBubbleNote = ({ task, onDelete, windowSize, isListMode }) => {
             // 位置・状態の管理
@@ -399,8 +405,6 @@
             // ドラッグ実装
             const handlePointerDown = (e) => {
                 if (e.target.closest('.delete-btn-area')) return;
-                // 音声コンテキストをここで初期化（iOS対応）
-                initAudio();
                 // 復帰タイマーをクリア
                 if (resumeTimerRef.current) clearTimeout(resumeTimerRef.current);
                 statusRef.current = 'active';
